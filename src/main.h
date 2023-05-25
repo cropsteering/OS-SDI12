@@ -19,19 +19,53 @@
 #include <WiFi.h>
 #include <map>
 #include <iostream>
+#include <WiFiClientSecure.h>
+#include <PubSubClient.h>
 
 /** Pin setup */
 #define TX_PIN WB_IO6 // SDI-12 data bus, TX
 #define RX_PIN WB_IO5 // SDI-12 data bus, RX
 #define OE WB_IO4	  // Output enable
+#define DEBUG 1
 
 /** Forward declatration */
 void cache_online();
 bool is_online(std::string addr);
 void concurrent_measure();
 void get_data(std::string addr, uint8_t num_resp);
-void connect_wifi();
+void wifi_connect();
+void mqtt_setup();
+void mqtt_connect();
+void mqtt_downlink(char* topic, byte* message, unsigned int length);
+std::string get_model(std::string addr);
 
 /** WiFi credentials */
-#define SSID "YOUR_SSID"
-#define PASSWORD "YOUR_PASSWORD"
+#define SSID ""
+#define PASSWORD ""
+
+/** MQTT credentials */
+#define MQTT_SERVER ""
+#define MQTT_PORT 1883
+#define MQTT_ID ""
+#define MQTT_USER ""
+#define MQTT_PASS ""
+
+/** Secure client cert */
+const char* server_root_ca = \
+    "-----BEGIN CERTIFICATE-----\n" \
+
+    "-----END CERTIFICATE-----\n";
+
+/**
+ * @brief 
+ * 
+ * @param chan 
+ * @param data 
+ */
+void R_LOG(std::string chan, std::string data)
+{
+    #if DEBUG
+    std::string disp = "["+chan+"] " + data;
+    Serial.println(disp.c_str());
+    #endif
+}

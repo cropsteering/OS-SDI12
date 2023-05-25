@@ -21,6 +21,10 @@ Ticker poll_sensor_ticker;
 uint8_t num_sensors;
 /** Default poll time is 15 seconds */
 uint16_t wait_time = 15;
+/** SSL/TLS WiFi client */
+WiFiClientSecure secure_client;
+/** MQTT client */
+PubSubClient mqtt_client(secure_client);
 
 /**
  * @brief Setup firmware
@@ -46,9 +50,11 @@ void setup()
         }
     }
 
-    connect_wifi();
+    wifi_connect();
+    mqtt_setup();
+    mqtt_connect();
 
-    Serial.println("Starting SDI-12 Bus");
+    R_LOG("SDI-12", "Starting bus");
     sdi12_bus.begin();
     delay(500);
 
@@ -62,6 +68,9 @@ void setup()
  */
 void loop() 
 {
+    /** Always check MQTT connection */
+    if(!mqtt_client.connected()) { mqtt_connect(); }
+    mqtt_client.loop();
 }
 
 /**
@@ -91,6 +100,7 @@ void concurrent_measure()
 
         resp_map.emplace(addr_cache[x], num_resp);
     }
+
     /** Wait 5+ seconds for all readings to finish
      * TODO: remove delay, handle this properly
      */
@@ -114,6 +124,7 @@ void concurrent_measure()
 void get_data(std::string addr, uint8_t num_resp)
 {
     uint8_t resp_count;
+    std::string mqtt_csv;
 
     while(resp_count < num_resp)
     {
@@ -142,8 +153,12 @@ void get_data(std::string addr, uint8_t num_resp)
             {
                 float sdi_data = sdi12_bus.parseFloat(SKIP_NONE);
                 if(sdi_data != -9999) { resp_count++; }
-                std::string disp = "Reading sensor " + addr + ": " + std::to_string(sdi_data);
-                Serial.println(disp.c_str());
+                if(resp_count < num_resp) 
+                { 
+                    mqtt_csv += std::to_string(sdi_data) + ", "; 
+                } else { 
+                    mqtt_csv += std::to_string(sdi_data);
+                }
             } else if(c == '+') {
                 sdi12_bus.read();
             } else {
@@ -154,7 +169,41 @@ void get_data(std::string addr, uint8_t num_resp)
     }
 
     sdi12_bus.clearBuffer();
+
+    if(mqtt_client.connected()) 
+    { 
+        std::string mqtt_sub = get_model(addr) + "/" + addr;
+        mqtt_client.publish(mqtt_sub.c_str(), mqtt_csv.c_str());
+        R_LOG("MQTT", "Publish");
+        R_LOG("MQTT", mqtt_sub);
+        R_LOG("MQTT", mqtt_csv);
+    }
+
     poll_sensor_ticker.once(wait_time, concurrent_measure);
+}
+
+/**
+ * @brief Get the model object
+ * 
+ * @param addr SDI-12 sensor address
+ * @return std::string Manufacturer sensor model
+ */
+std::string get_model(std::string addr)
+{
+    std::string sdi_command;
+    sdi_command = "";
+    sdi_command += addr;
+    sdi_command += "I!";
+
+    sdi12_bus.sendCommand(sdi_command.c_str());
+    delay(100);
+
+    String sdi_response = sdi12_bus.readStringUntil('\n');
+    sdi_response.trim();
+
+    std::string s(sdi_response.substring(11, 17).c_str());
+    
+    return s;
 }
 
 /**
@@ -168,7 +217,7 @@ void cache_online()
         if(is_online(std::to_string(x)))
         {
             std::string disp = "Address cached " + std::to_string(x);
-            Serial.println(disp.c_str());
+            R_LOG("SDI-12", disp);
             addr_cache.push_back(std::to_string(x));
         }
     }
@@ -180,7 +229,7 @@ void cache_online()
         if(is_online(ss.str()))
         {
             std::string disp = "Address cached" + std::to_string(y);
-            Serial.println(disp.c_str());
+            R_LOG("SDI-12", disp);
             addr_cache.push_back(std::to_string(y));
         }
     }
@@ -192,7 +241,7 @@ void cache_online()
         if(is_online(ss.str()))
         {
             std::string disp = "Address cached" + std::to_string(z);
-            Serial.println(disp.c_str());
+            R_LOG("SDI-12", disp);
             addr_cache.push_back(std::to_string(z));
         }
     }
@@ -227,14 +276,14 @@ bool is_online(std::string addr)
 
         if(avail > 0)
         {
-            std::string disp = "SDI-12 sensor found on " + addr;
-            Serial.println(disp.c_str());
+            std::string disp = "Sensor found on " + addr;
+            R_LOG("SDI-12", disp);
             sdi12_bus.clearBuffer();
             found = true;
             return true;
         } else {
-            std::string disp = "No SDI-12 sensor found on " + addr;
-            Serial.println(disp.c_str());
+            std::string disp = "No sensor found on " + addr;
+            R_LOG("SDI-12", disp);
             sdi12_bus.clearBuffer();
             found = false;
         }
@@ -243,13 +292,18 @@ bool is_online(std::string addr)
     return found;
 }
 
-void connect_wifi()
+/**
+ * @brief Connect to Wifi
+ * Use cert and secure client for SSL/TLS
+ * 
+ */
+void wifi_connect()
 {
     delay(10);
 
     std::string disp = "[WiFi] Connecting to ";
-    Serial.println(disp.c_str());
-    Serial.print(SSID);
+    printf(disp.c_str(), SSID);
+    R_LOG("WiFi", disp);
 
     WiFi.setHostname("SDI-12_data_logger");
     WiFi.begin(SSID, PASSWORD);
@@ -260,8 +314,52 @@ void connect_wifi()
         Serial.print(".");
     }
 
-    Serial.println("");
-    Serial.println("WiFi connected");
-    Serial.println("IP address: ");
-    Serial.println(WiFi.localIP());
+    R_LOG("WiFi", "");
+    R_LOG("WiFi", "WiFi connected");
+    R_LOG("WiFi", "IP address: " + WiFi.localIP());
+
+    secure_client.setCACert(server_root_ca);
+}
+
+/**
+ * @brief Setup MQTT server
+ * Add MQTT downlink call back
+ * 
+ */
+void mqtt_setup()
+{
+    mqtt_client.setServer(MQTT_SERVER, MQTT_PORT);
+    mqtt_client.setCallback(mqtt_downlink);
+}
+
+/**
+ * @brief Connect to MQTT server
+ * 
+ */
+void mqtt_connect()
+{
+    while(!mqtt_client.connected())
+    {
+        R_LOG("MQTT", "Connecting to broker");
+        if(mqtt_client.connect(MQTT_ID, MQTT_USER, MQTT_PASS))
+        {
+            R_LOG("MQTT", "Connected to broker");
+        } else {
+            R_LOG("MQTT", "Error code: " + mqtt_client.state());
+            delay(5000);
+        }
+    }
+}
+
+/**
+ * @brief 
+ * 
+ * @param topic 
+ * @param message 
+ * @param length 
+ * 
+ */
+void mqtt_downlink(char* topic, byte* message, unsigned int length)
+{
+    R_LOG("MQTT", "MQTT downlink recieved");
 }
