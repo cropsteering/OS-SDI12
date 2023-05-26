@@ -104,7 +104,7 @@ void concurrent_measure()
     /** Wait 5+ seconds for all readings to finish
      * TODO: remove delay, handle this properly
      */
-    delay(6000);
+    delay(10000);
 
     std::map<std::string, uint8_t>::iterator it = resp_map.begin();
     while (it != resp_map.end())
@@ -166,6 +166,7 @@ void get_data(std::string addr, uint8_t num_resp)
             }
             delay(10);
         }
+        delay(100);
     }
 
     sdi12_bus.clearBuffer();
