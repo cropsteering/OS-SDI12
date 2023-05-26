@@ -297,8 +297,8 @@ void wifi_connect()
     delay(10);
 
     std::string disp = "[WiFi] Connecting to ";
-    printf(disp.c_str(), SSID);
-    R_LOG("WiFi", disp);
+    Serial.println(disp.c_str());
+    Serial.print(SSID);
 
     WiFi.setHostname("SDI-12_data_logger");
     WiFi.begin(SSID, PASSWORD);
@@ -309,9 +309,10 @@ void wifi_connect()
         Serial.print(".");
     }
 
-    R_LOG("WiFi", "");
-    R_LOG("WiFi", "WiFi connected");
-    R_LOG("WiFi", "IP address: " + WiFi.localIP());
+    Serial.println("");
+    Serial.println("WiFi connected");
+    Serial.println("IP address: ");
+    Serial.println(WiFi.localIP());
 
     secure_client.setCACert(server_root_ca);
 }

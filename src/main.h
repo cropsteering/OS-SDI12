@@ -45,7 +45,7 @@ std::string get_model(std::string addr);
 
 /** MQTT credentials */
 #define MQTT_SERVER ""
-#define MQTT_PORT 1883
+#define MQTT_PORT 8883
 #define MQTT_ID ""
 #define MQTT_USER ""
 #define MQTT_PASS ""
@@ -53,7 +53,7 @@ std::string get_model(std::string addr);
 /** Secure client cert */
 const char* server_root_ca = \
     "-----BEGIN CERTIFICATE-----\n" \
-
+ 
     "-----END CERTIFICATE-----\n";
 
 /**
