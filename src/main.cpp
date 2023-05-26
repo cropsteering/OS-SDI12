@@ -216,8 +216,7 @@ void cache_online()
     {
         if(is_online(std::to_string(x)))
         {
-            std::string disp = "Address cached " + std::to_string(x);
-            R_LOG("SDI-12", disp);
+            R_LOG("SDI-12", "Address cached " + std::to_string(x));
             addr_cache.push_back(std::to_string(x));
         }
     }
@@ -228,8 +227,7 @@ void cache_online()
         ss << y;
         if(is_online(ss.str()))
         {
-            std::string disp = "Address cached" + std::to_string(y);
-            R_LOG("SDI-12", disp);
+            R_LOG("SDI-12", "Address cached" + std::to_string(y));
             addr_cache.push_back(std::to_string(y));
         }
     }
@@ -240,8 +238,7 @@ void cache_online()
         ss << z;
         if(is_online(ss.str()))
         {
-            std::string disp = "Address cached" + std::to_string(z);
-            R_LOG("SDI-12", disp);
+            R_LOG("SDI-12", "Address cached" + std::to_string(z));
             addr_cache.push_back(std::to_string(z));
         }
     }
@@ -276,14 +273,12 @@ bool is_online(std::string addr)
 
         if(avail > 0)
         {
-            std::string disp = "Sensor found on " + addr;
-            R_LOG("SDI-12", disp);
+            R_LOG("SDI-12", "Sensor found on " + addr);
             sdi12_bus.clearBuffer();
             found = true;
             return true;
         } else {
-            std::string disp = "No sensor found on " + addr;
-            R_LOG("SDI-12", disp);
+            R_LOG("SDI-12", "No sensor found on " + addr);
             sdi12_bus.clearBuffer();
             found = false;
         }
