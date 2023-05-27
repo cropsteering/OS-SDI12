@@ -341,7 +341,7 @@ void mqtt_connect()
         {
             R_LOG("MQTT", "Connected to broker");
         } else {
-            R_LOG("MQTT", "Error code: " + mqtt_client.state());
+            R_LOG("MQTT", "Error code: " + std::to_string(mqtt_client.state()));
             delay(5000);
         }
     }

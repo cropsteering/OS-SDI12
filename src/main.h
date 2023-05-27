@@ -53,7 +53,7 @@ std::string get_model(std::string addr);
 /** Secure client cert */
 const char* server_root_ca = \
     "-----BEGIN CERTIFICATE-----\n" \
- 
+
     "-----END CERTIFICATE-----\n";
 
 /**
