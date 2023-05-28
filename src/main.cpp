@@ -82,8 +82,9 @@ void loop()
  */
 void concurrent_measure()
 {
+    R_LOG("SDI-12", "Starting concurrent measure");
     sdi12_bus.clearBuffer();
-    std::map<std::string, uint8_t> resp_map;
+    std::map<std::string, std::map<uint8_t, uint8_t>> resp_map;
 
     for(int x = 0; x < num_sensors; x++)
     {
@@ -97,20 +98,20 @@ void concurrent_measure()
         String sdi_response = sdi12_bus.readStringUntil('\n');
         sdi_response.trim();
         uint8_t num_resp = sdi_response.substring(4).toInt();
+        uint8_t read_time = sdi_response.substring(1, 4).toInt();
 
-        resp_map.emplace(addr_cache[x], num_resp);
+        resp_map.insert(std::make_pair(addr_cache[x], std::map<uint8_t, uint8_t>()));
+        resp_map[addr_cache[x]].insert(std::make_pair(num_resp, read_time));
     }
 
-    /** Wait 5+ seconds for all readings to finish
-     * TODO: remove delay, handle this properly
-     */
-    delay(10000);
-
-    std::map<std::string, uint8_t>::iterator it = resp_map.begin();
-    while (it != resp_map.end())
+    std::map<std::string, std::map<uint8_t, uint8_t>>::iterator itr;
+    std::map<uint8_t, uint8_t>::iterator ptr;
+    for (itr = resp_map.begin(); itr != resp_map.end(); itr++) 
     {
-        get_data(it->first, it->second);
-        ++it;
+        for (ptr = itr->second.begin(); ptr != itr->second.end(); ptr++) 
+        {
+            get_data(itr->first, ptr->first, ptr->second);
+        }
     }
 }
 
@@ -121,10 +122,17 @@ void concurrent_measure()
  * @param addr the SDI-12 sensor address
  * @param num_resp number of responses from SDI-12 sensor
  */
-void get_data(std::string addr, uint8_t num_resp)
+void get_data(std::string addr, uint8_t num_resp, uint8_t read_time)
 {
+    R_LOG("SDI-12", "Getting sensor data");
     uint8_t resp_count;
     std::string mqtt_csv;
+    uint32_t read_ms = read_time * 1000;
+    time_t timeout = millis();
+
+    /** Wait until sensor is finished reading */
+    R_LOG("SDI-12", "Pausing for: " + std::to_string(read_time));
+    while((millis() - timeout) < read_ms);
 
     while(resp_count < num_resp)
     {
@@ -166,18 +174,23 @@ void get_data(std::string addr, uint8_t num_resp)
             }
             delay(10);
         }
-        delay(100);
     }
 
+    std::string mqtt_sub = get_model(addr) + "/" + addr;
     sdi12_bus.clearBuffer();
 
     if(mqtt_client.connected()) 
     { 
-        std::string mqtt_sub = get_model(addr) + "/" + addr;
-        mqtt_client.publish(mqtt_sub.c_str(), mqtt_csv.c_str());
-        R_LOG("MQTT", "Publish");
-        R_LOG("MQTT", mqtt_sub);
-        R_LOG("MQTT", mqtt_csv);
+        if(mqtt_client.publish(mqtt_sub.c_str(), mqtt_csv.c_str()))
+        {
+            R_LOG("MQTT", "Publish");
+            R_LOG("MQTT", mqtt_sub);
+            R_LOG("MQTT", mqtt_csv);
+        } else {
+            mqtt_connect(); 
+        }
+    } else {
+        mqtt_connect(); 
     }
 
     poll_sensor_ticker.once(wait_time, concurrent_measure);
@@ -191,6 +204,7 @@ void get_data(std::string addr, uint8_t num_resp)
  */
 std::string get_model(std::string addr)
 {
+    R_LOG("SDI-12", "Getting sensor model");
     std::string sdi_command;
     sdi_command = "";
     sdi_command += addr;
@@ -335,7 +349,7 @@ void mqtt_setup()
  */
 void mqtt_connect()
 {
-    while(!mqtt_client.connected())
+    while(!mqtt_client.connected() && WiFi.status() == WL_CONNECTED)
     {
         R_LOG("MQTT", "Connecting to broker");
         if(mqtt_client.connect(MQTT_ID, MQTT_USER, MQTT_PASS))
@@ -346,6 +360,7 @@ void mqtt_connect()
             delay(5000);
         }
     }
+    if(WiFi.status() != WL_CONNECTED) { wifi_connect(); }
 }
 
 /**

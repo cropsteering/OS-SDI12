@@ -32,7 +32,7 @@
 void cache_online();
 bool is_online(std::string addr);
 void concurrent_measure();
-void get_data(std::string addr, uint8_t num_resp);
+void get_data(std::string addr, uint8_t num_resp, uint8_t read_time);
 void wifi_connect();
 void mqtt_setup();
 void mqtt_connect();
