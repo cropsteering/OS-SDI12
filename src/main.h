@@ -50,6 +50,9 @@ std::string get_model(std::string addr);
 #define MQTT_USER ""
 #define MQTT_PASS ""
 
+/** Config options */
+std::string ZONE_NAME = "Zone1";
+
 /** Secure client cert */
 const char* server_root_ca = \
     "-----BEGIN CERTIFICATE-----\n" \

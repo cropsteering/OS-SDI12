@@ -185,7 +185,7 @@ void get_data(std::string addr, uint8_t num_resp, uint8_t read_time)
         }
     }
 
-    std::string mqtt_sub = "r4wk/" + addr;
+    std::string mqtt_sub = ZONE_NAME + "/" + addr;
     sdi12_bus.clearBuffer();
 
     if(mqtt_client.connected()) 
@@ -203,31 +203,6 @@ void get_data(std::string addr, uint8_t num_resp, uint8_t read_time)
     }
 
     poll_sensor_ticker.once(wait_time, concurrent_measure);
-}
-
-/**
- * @brief Get the model object
- * 
- * @param addr SDI-12 sensor address
- * @return std::string Manufacturer sensor model
- */
-std::string get_model(std::string addr)
-{
-    R_LOG("SDI-12", "Getting sensor model");
-    std::string sdi_command;
-    sdi_command = "";
-    sdi_command += addr;
-    sdi_command += "I!";
-
-    sdi12_bus.sendCommand(sdi_command.c_str());
-    delay(100);
-
-    String sdi_response = sdi12_bus.readStringUntil('\n');
-    sdi_response.trim();
-
-    std::string s(sdi_response.substring(11, 17).c_str());
-    
-    return s;
 }
 
 /**
