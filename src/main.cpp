@@ -97,8 +97,10 @@ void concurrent_measure()
         sdi12_bus.sendCommand(sdi_command.c_str());
         String sdi_response = sdi12_bus.readStringUntil('\n');
         sdi_response.trim();
+
         uint8_t num_resp = sdi_response.substring(4).toInt();
         uint8_t read_time = sdi_response.substring(1, 4).toInt();
+        if(read_time == 0) { read_time = 1; }
 
         resp_map.insert(std::make_pair(addr_cache[x], std::map<uint8_t, uint8_t>()));
         resp_map[addr_cache[x]].insert(std::make_pair(num_resp, read_time));
@@ -130,9 +132,17 @@ void get_data(std::string addr, uint8_t num_resp, uint8_t read_time)
     uint32_t read_ms = read_time * 1000;
     time_t timeout = millis();
 
-    /** Wait until sensor is finished reading */
+    /** Wait until sensor is finished reading 
+     * TODO: Make this non blocking
+     * 
+    */
     R_LOG("SDI-12", "Pausing for: " + std::to_string(read_time));
-    while((millis() - timeout) < read_ms);
+    while((millis() - timeout) < read_ms)
+    {
+        /** Make sure we stay connected while pausing */
+        if(!mqtt_client.connected()) { mqtt_connect(); }
+        mqtt_client.loop();
+    }
 
     while(resp_count < num_resp)
     {
