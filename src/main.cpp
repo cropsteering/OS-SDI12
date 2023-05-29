@@ -185,7 +185,7 @@ void get_data(std::string addr, uint8_t num_resp, uint8_t read_time)
         }
     }
 
-    std::string mqtt_sub = get_model(addr) + "/" + addr;
+    std::string mqtt_sub = "r4wk/" + addr;
     sdi12_bus.clearBuffer();
 
     if(mqtt_client.connected()) 
