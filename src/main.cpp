@@ -130,14 +130,14 @@ void get_data(std::string addr, uint8_t num_resp, uint8_t read_time)
     uint8_t resp_count;
     std::string mqtt_csv;
     uint32_t read_ms = read_time * 1000;
-    time_t timeout = millis();
+    time_t timeout_sdi = millis();
 
     /** Wait until sensor is finished reading 
      * TODO: Make this non blocking
      * 
     */
     R_LOG("SDI-12", "Pausing for: " + std::to_string(read_time));
-    while((millis() - timeout) < read_ms)
+    while((millis() - timeout_sdi) < read_ms)
     {
         /** Make sure we stay connected while pausing */
         if(!mqtt_client.connected()) { mqtt_connect(); }
@@ -192,8 +192,9 @@ void get_data(std::string addr, uint8_t num_resp, uint8_t read_time)
      * TODO: Make this non blocking
      * 
     */
+    time_t timeout_mqtt = millis();
     R_LOG("MQTT", "Pausing for: " + std::to_string(read_time));
-    while((millis() - timeout) < read_ms)
+    while((millis() - timeout_mqtt) < read_ms)
     {
         /** Make sure we stay connected while pausing */
         if(!mqtt_client.connected()) { mqtt_connect(); }
