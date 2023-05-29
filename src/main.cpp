@@ -126,7 +126,7 @@ void concurrent_measure()
  */
 void get_data(std::string addr, uint8_t num_resp, uint8_t read_time)
 {
-    R_LOG("SDI-12", "Getting sensor data");
+    R_LOG("SDI-12", "Start data read");
     uint8_t resp_count;
     std::string mqtt_csv;
     uint32_t read_ms = read_time * 1000;
@@ -141,7 +141,6 @@ void get_data(std::string addr, uint8_t num_resp, uint8_t read_time)
     {
         /** Make sure we stay connected while pausing */
         if(!mqtt_client.connected()) { mqtt_connect(); }
-        mqtt_client.loop();
     }
 
     while(resp_count < num_resp)
