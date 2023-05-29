@@ -127,79 +127,95 @@ void concurrent_measure()
 void get_data(std::string addr, uint8_t num_resp, uint8_t read_time)
 {
     R_LOG("SDI-12", "Start data read");
-    uint8_t resp_count;
-    std::string mqtt_csv;
-    uint32_t read_ms = read_time * 1000;
-    time_t timeout = millis();
-
-    /** Wait until sensor is finished reading 
-     * TODO: Make this non blocking
-     * 
-    */
-    R_LOG("SDI-12", "Pausing for: " + std::to_string(read_time));
-    while((millis() - timeout) < read_ms)
+    if(is_online(addr))
     {
-        /** Make sure we stay connected while pausing */
-        if(!mqtt_client.connected()) { mqtt_connect(); }
-    }
+        uint8_t resp_count;
+        std::string mqtt_csv;
+        uint32_t read_ms = read_time * 1000;
+        time_t timeout = millis();
 
-    while(resp_count < num_resp)
-    {
-        std::string sdi_command;
-        sdi_command = "";
-        sdi_command += addr;
-        sdi_command += "D0";
-        sdi_command += "!";
-
-        sdi12_bus.sendCommand(sdi_command.c_str());
-
-        uint32_t start = millis();
-        while (sdi12_bus.available() < 3 && (millis() - start) < 1500);
-        sdi12_bus.read();
-        char c = sdi12_bus.peek();
-
-        if(c == '+')
+        /** Wait until sensor is finished reading 
+         * TODO: Make this non blocking
+         * 
+        */
+        R_LOG("SDI-12", "Pausing for: " + std::to_string(read_time));
+        while((millis() - timeout) < read_ms)
         {
-            sdi12_bus.read();
+            /** Make sure we stay connected while pausing */
+            if(!mqtt_client.connected()) { mqtt_connect(); }
         }
 
-        while(sdi12_bus.available())
+        while(resp_count < num_resp)
         {
+            std::string sdi_command;
+            sdi_command = "";
+            sdi_command += addr;
+            sdi_command += "D0";
+            sdi_command += "!";
+
+            sdi12_bus.sendCommand(sdi_command.c_str());
+
+            uint32_t start = millis();
+            while (sdi12_bus.available() < 3 && (millis() - start) < 1500);
+            sdi12_bus.read();
             char c = sdi12_bus.peek();
-            if (c == '-' || (c >= '0' && c <= '9') || c == '.')
+
+            if(c == '+')
             {
-                float sdi_data = sdi12_bus.parseFloat(SKIP_NONE);
-                if(sdi_data != -9999) { resp_count++; }
-                if(resp_count < num_resp) 
-                { 
-                    mqtt_csv += std::to_string(sdi_data) + ", "; 
-                } else { 
-                    mqtt_csv += std::to_string(sdi_data);
-                }
-            } else if(c == '+') {
-                sdi12_bus.read();
-            } else {
                 sdi12_bus.read();
             }
-            delay(10);
+
+            while(sdi12_bus.available())
+            {
+                char c = sdi12_bus.peek();
+                if (c == '-' || (c >= '0' && c <= '9') || c == '.')
+                {
+                    float sdi_data = sdi12_bus.parseFloat(SKIP_NONE);
+                    if(sdi_data != -9999) { resp_count++; }
+                    if(resp_count < num_resp) 
+                    { 
+                        mqtt_csv += std::to_string(sdi_data) + ", "; 
+                    } else { 
+                        mqtt_csv += std::to_string(sdi_data);
+                    }
+                } else if(c == '+') {
+                    sdi12_bus.read();
+                } else {
+                    sdi12_bus.read();
+                }
+                delay(10);
+            }
         }
-    }
 
-    std::string mqtt_sub = ZONE_NAME + "/" + addr;
-    sdi12_bus.clearBuffer();
+        std::string mqtt_sub = ZONE_NAME + "/" + addr;
+        sdi12_bus.clearBuffer();
 
-    if(mqtt_client.connected()) 
-    { 
-        if(mqtt_client.publish(mqtt_sub.c_str(), mqtt_csv.c_str()))
+        /** Wait until sensor is finished reading 
+         * TODO: Make this non blocking
+         * 
+        */
+        R_LOG("MQTT", "Pausing for: " + std::to_string(read_time));
+        while((millis() - timeout) < read_ms)
         {
-            R_LOG("MQTT", "Publish");
-            R_LOG("MQTT", mqtt_sub);
-            R_LOG("MQTT", mqtt_csv);
+            /** Make sure we stay connected while pausing */
+            if(!mqtt_client.connected()) { mqtt_connect(); }
+        }
+
+        if(mqtt_client.connected()) 
+        { 
+            if(mqtt_client.publish(mqtt_sub.c_str(), mqtt_csv.c_str()))
+            {
+                R_LOG("MQTT", "Publish");
+                R_LOG("MQTT", mqtt_sub);
+                R_LOG("MQTT", mqtt_csv);
+            } else {
+                mqtt_connect(); 
+            }
         } else {
             mqtt_connect(); 
         }
     } else {
-        mqtt_connect(); 
+        R_LOG("SDI-12", "Sensor went offline: " + addr);
     }
 
     poll_sensor_ticker.once(wait_time, concurrent_measure);
