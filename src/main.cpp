@@ -23,6 +23,14 @@ uint8_t num_sensors;
 WiFiClientSecure secure_client;
 /** MQTT client */
 PubSubClient mqtt_client(secure_client);
+/** Bool to trigger sensor reading */
+bool trigger_read = false;
+
+/**
+ * @brief Call back for Ticker to trigger reading
+ * 
+ */
+void ticker_trigger() { trigger_read = true; }
 
 /**
  * @brief Setup firmware
@@ -57,7 +65,8 @@ void setup()
     delay(500);
 
     cache_online();
-    poll_sensor_ticker.once(wait_time, concurrent_measure);
+
+    poll_sensor_ticker.once(wait_time, ticker_trigger);
 }
 
 /**
@@ -69,6 +78,7 @@ void loop()
     /** Always check MQTT connection */
     if(!mqtt_client.connected()) { mqtt_connect(); }
     mqtt_client.loop();
+    if(trigger_read) { concurrent_measure(); }
 }
 
 /**
@@ -121,6 +131,7 @@ void concurrent_measure()
             get_data(itr->first, ptr->first, ptr->second);
         }
     }
+    trigger_read = false;
 }
 
 /**
@@ -196,7 +207,7 @@ void get_data(std::string addr, uint8_t num_resp, uint8_t read_time)
         mqtt_connect(); 
     }
 
-    poll_sensor_ticker.once(wait_time, concurrent_measure);
+    poll_sensor_ticker.once(wait_time, ticker_trigger);
 }
 
 /**
