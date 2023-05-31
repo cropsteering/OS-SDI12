@@ -37,7 +37,6 @@ void wifi_connect();
 void mqtt_setup();
 void mqtt_connect();
 void mqtt_downlink(char* topic, byte* message, unsigned int length);
-std::string get_model(std::string addr);
 
 /** WiFi credentials */
 #define SSID ""
@@ -50,8 +49,10 @@ std::string get_model(std::string addr);
 #define MQTT_USER ""
 #define MQTT_PASS ""
 
-/** Config options */
-std::string ZONE_NAME = "Zone1";
+/** Logger zone name */
+std::string zone_name = "Zone1";
+/** Default poll time is 15 seconds */
+uint16_t wait_time = 15;
 
 /** Secure client cert */
 const char* server_root_ca = \

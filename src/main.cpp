@@ -19,8 +19,6 @@ std::vector<std::string> addr_cache;
 Ticker poll_sensor_ticker;
 /** Number of online sensors */
 uint8_t num_sensors;
-/** Default poll time is 15 seconds */
-uint16_t wait_time = 15;
 /** SSL/TLS WiFi client */
 WiFiClientSecure secure_client;
 /** MQTT client */
@@ -85,6 +83,7 @@ void concurrent_measure()
     R_LOG("SDI-12", "Starting concurrent measure");
     sdi12_bus.clearBuffer();
     std::map<std::string, std::map<uint8_t, uint8_t>> resp_map;
+    uint32_t read_total = 0;
 
     for(int x = 0; x < num_sensors; x++)
     {
@@ -104,7 +103,14 @@ void concurrent_measure()
 
         resp_map.insert(std::make_pair(addr_cache[x], std::map<uint8_t, uint8_t>()));
         resp_map[addr_cache[x]].insert(std::make_pair(num_resp, read_time));
+        read_total += read_time;
     }
+
+    uint32_t read_ms = read_total * 1000;
+    time_t timeout_sdi = millis() + read_ms;
+    R_LOG("SDI-12", "Pausing for: " + std::to_string(read_total));
+    /** Make this non blocking */
+    while(millis() < timeout_sdi);
 
     std::map<std::string, std::map<uint8_t, uint8_t>>::iterator itr;
     std::map<uint8_t, uint8_t>::iterator ptr;
@@ -129,19 +135,6 @@ void get_data(std::string addr, uint8_t num_resp, uint8_t read_time)
     R_LOG("SDI-12", "Start data read");
     uint8_t resp_count;
     std::string mqtt_csv;
-    uint32_t read_ms = read_time * 1000;
-    time_t timeout_sdi = millis();
-
-    /** Wait until sensor is finished reading 
-     * TODO: Make this non blocking
-     * 
-    */
-    R_LOG("SDI-12", "Pausing for: " + std::to_string(read_time));
-    while((millis() - timeout_sdi) < read_ms)
-    {
-        /** Make sure we stay connected while pausing */
-        if(!mqtt_client.connected()) { mqtt_connect(); }
-    }
 
     while(resp_count < num_resp)
     {
@@ -153,6 +146,7 @@ void get_data(std::string addr, uint8_t num_resp, uint8_t read_time)
 
         sdi12_bus.sendCommand(sdi_command.c_str());
 
+        /** Blocking, can we do this differently? */
         uint32_t start = millis();
         while (sdi12_bus.available() < 3 && (millis() - start) < 1500);
         sdi12_bus.read();
@@ -185,20 +179,8 @@ void get_data(std::string addr, uint8_t num_resp, uint8_t read_time)
         }
     }
 
-    std::string mqtt_sub = ZONE_NAME + "/" + addr;
+    std::string mqtt_sub = zone_name + "/" + addr;
     sdi12_bus.clearBuffer();
-
-    /** Wait until sensor is finished reading 
-     * TODO: Make this non blocking
-     * 
-    */
-    time_t timeout_mqtt = millis();
-    R_LOG("MQTT", "Pausing for: " + std::to_string(read_time));
-    while((millis() - timeout_mqtt) < read_ms)
-    {
-        /** Make sure we stay connected while pausing */
-        if(!mqtt_client.connected()) { mqtt_connect(); }
-    }
 
     if(mqtt_client.connected()) 
     { 
@@ -325,6 +307,7 @@ void wifi_connect()
     Serial.println("IP address: ");
     Serial.println(WiFi.localIP());
 
+    secure_client.setTimeout(60);
     secure_client.setCACert(server_root_ca);
 }
 
@@ -336,6 +319,8 @@ void wifi_connect()
 void mqtt_setup()
 {
     mqtt_client.setServer(MQTT_SERVER, MQTT_PORT);
+    mqtt_client.setKeepAlive(60);
+    mqtt_client.setSocketTimeout(60);
     mqtt_client.setCallback(mqtt_downlink);
 }
 
