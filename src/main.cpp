@@ -104,6 +104,7 @@ void concurrent_measure()
         sdi_command += "!";
 
         sdi12_bus.sendCommand(sdi_command.c_str());
+        delay(30);
         String sdi_response = sdi12_bus.readStringUntil('\n');
         sdi_response.trim();
 
@@ -147,47 +148,41 @@ void get_data(std::string addr, uint8_t num_resp, uint8_t read_time)
     uint8_t resp_count;
     std::string mqtt_csv;
 
-    while(resp_count < num_resp)
+    std::string sdi_command;
+    sdi_command = "";
+    sdi_command += addr;
+    sdi_command += "D0";
+    sdi_command += "!";
+
+    sdi12_bus.sendCommand(sdi_command.c_str());
+
+    /** Blocking, can we do this differently? */
+    uint32_t start = millis();
+    while (sdi12_bus.available() < 3 && (millis() - start) < 1500);
+    sdi12_bus.read();
+    char c = sdi12_bus.peek();
+
+    if(c == '+') { sdi12_bus.read(); }
+
+    while(sdi12_bus.available())
     {
-        std::string sdi_command;
-        sdi_command = "";
-        sdi_command += addr;
-        sdi_command += "D0";
-        sdi_command += "!";
-
-        sdi12_bus.sendCommand(sdi_command.c_str());
-
-        /** Blocking, can we do this differently? */
-        uint32_t start = millis();
-        while (sdi12_bus.available() < 3 && (millis() - start) < 1500);
-        sdi12_bus.read();
         char c = sdi12_bus.peek();
-
-        if(c == '+')
+        if (c == '-' || (c >= '0' && c <= '9') || c == '.')
         {
+            float sdi_data = sdi12_bus.parseFloat(SKIP_NONE);
+            if(sdi_data != -9999) { resp_count++; }
+            if(resp_count < num_resp) 
+            { 
+                mqtt_csv += std::to_string(sdi_data) + ", "; 
+            } else { 
+                mqtt_csv += std::to_string(sdi_data);
+            }
+        } else if(c == '+') {
+            sdi12_bus.read();
+        } else {
             sdi12_bus.read();
         }
-
-        while(sdi12_bus.available())
-        {
-            char c = sdi12_bus.peek();
-            if (c == '-' || (c >= '0' && c <= '9') || c == '.')
-            {
-                float sdi_data = sdi12_bus.parseFloat(SKIP_NONE);
-                if(sdi_data != -9999) { resp_count++; }
-                if(resp_count < num_resp) 
-                { 
-                    mqtt_csv += std::to_string(sdi_data) + ", "; 
-                } else { 
-                    mqtt_csv += std::to_string(sdi_data);
-                }
-            } else if(c == '+') {
-                sdi12_bus.read();
-            } else {
-                sdi12_bus.read();
-            }
-            delay(10);
-        }
+        delay(10);
     }
 
     std::string mqtt_sub = zone_name + "/" + addr;
@@ -318,7 +313,7 @@ void wifi_connect()
     Serial.println("IP address: ");
     Serial.println(WiFi.localIP());
 
-    secure_client.setTimeout(60);
+    secure_client.setTimeout(KEEP_ALIVE);
     secure_client.setCACert(server_root_ca);
 }
 
@@ -330,8 +325,8 @@ void wifi_connect()
 void mqtt_setup()
 {
     mqtt_client.setServer(MQTT_SERVER, MQTT_PORT);
-    mqtt_client.setKeepAlive(60);
-    mqtt_client.setSocketTimeout(60);
+    mqtt_client.setKeepAlive(KEEP_ALIVE);
+    mqtt_client.setSocketTimeout(KEEP_ALIVE);
     mqtt_client.setCallback(mqtt_downlink);
 }
 

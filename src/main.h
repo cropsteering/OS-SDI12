@@ -54,6 +54,8 @@ std::string zone_name = "Zone1";
 /** Default poll time is 15 seconds */
 uint16_t wait_time = 15;
 
+#define KEEP_ALIVE 120
+
 /** Secure client cert */
 const char* server_root_ca = \
     "-----BEGIN CERTIFICATE-----\n" \
