@@ -31,12 +31,13 @@
 /** Forward declatration */
 void cache_online();
 bool is_online(std::string addr);
-void concurrent_measure();
-void get_data(std::string addr, uint8_t num_resp, uint8_t read_time);
+void sdi_measure();
+void get_data(std::string addr, uint8_t num_resp);
 void wifi_connect();
 void mqtt_setup();
 void mqtt_connect();
 void mqtt_downlink(char* topic, byte* message, unsigned int length);
+void ticker_trigger();
 
 /** WiFi credentials */
 #define SSID ""
@@ -54,6 +55,7 @@ std::string zone_name = "Zone1";
 /** Default poll time is 15 seconds */
 uint16_t wait_time = 15;
 
+/** Keep wifi/MQTT alive*/
 #define KEEP_ALIVE 120
 
 /** Secure client cert */
