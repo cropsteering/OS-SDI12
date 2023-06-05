@@ -88,17 +88,9 @@ void loop()
         }
     }
 
-    if (reply_ready)
+    for(int x = 0; x < num_sensors; x++)
     {
-        R_LOG("SDI-12", "Reply: "+ sdi_reply);
-        reply_ready = false;  // Reset String for next SDI-12 message.
-        sdi_reply   = "";
-        if(sdi_flag == 2) { sdi_flag = 3; }
-    }
-
-    if (sdi_flag)
-    {
-        for(int x = 0; x < num_sensors; x++)
+        if (sdi_flag)
         {
             if(sdi_flag == 1)
             {
@@ -115,8 +107,16 @@ void loop()
                 sdi12_bus.clearBuffer();
             }
         }
-        sdi_ready = true;
+
+        if (reply_ready)
+        {
+            R_LOG("SDI-12", "Reply: "+ sdi_reply);
+            reply_ready = false;  // Reset String for next SDI-12 message.
+            sdi_reply   = "";
+            if(sdi_flag == 2) { sdi_flag = 3; }
+        }
     }
+    sdi_ready = true;
 }
 
 /**
