@@ -58,38 +58,18 @@ void setup()
 
 void loop() 
 {
+    static uint32_t last_time;
     static uint8_t sdi_flag = 0;
     static String  sdi_reply;
     static boolean reply_ready = false;
-
-    static uint32_t last_time;
     if (micros() - last_time >= PERIOD && sdi_ready)
     {
         last_time += PERIOD;
         sdi_ready = false;
         sdi_flag = 1;
     }
-
     for(int x = 0; x < num_sensors; x++)
     {
-        if (sdi_flag)
-        {
-            if(sdi_flag == 1)
-            {
-                sdi_flag = 2;
-                sdi12_bus.sendCommand(addr_cache[x] + "M!");
-                R_LOG("SDI-12", "Sent: " + addr_cache[x] + "M!");
-            }
-            if(sdi_flag == 3)
-            {
-                sdi_flag = 0;
-                delay(2000);
-                sdi12_bus.sendCommand(addr_cache[x] + "D0!");
-                R_LOG("SDI-12", "Sent: " + addr_cache[x] + "D0!");
-                sdi12_bus.clearBuffer();
-            }
-        }
-
         int avail = sdi12_bus.available();
         if (avail < 0) 
         {
@@ -115,8 +95,31 @@ void loop()
             sdi_reply   = "";
             if(sdi_flag == 2) { sdi_flag = 3; }
         }
+        if (sdi_flag)
+        {
+            if(sdi_flag == 1)
+            {
+                sdi_flag = 2;
+                sdi12_bus.sendCommand(addr_cache[x] + "M!");
+                R_LOG("SDI-12", "Sent: " + addr_cache[x] + "M!");
+            }
+            if(sdi_flag == 3)
+            {
+                sdi_flag = 0;
+                delay(2000);
+                sdi12_bus.sendCommand(addr_cache[x] + "D0!");
+                R_LOG("SDI-12", "Sent: " + addr_cache[x] + "D0!");
+                sdi12_bus.clearBuffer();
+            }
+        }
     }
+    
     sdi_ready = true;
+}
+
+void sdi_measuer()
+{
+    
 }
 
 /**
