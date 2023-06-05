@@ -73,9 +73,6 @@ void sdi_measure()
 {
     sdi_ready = false;
     static String sdi_response;
-    static String test;
-    std::string testing;
-    std::string testing2;
     for(int x = 0; x < num_sensors; x++)
     {
         sdi_response = "";
