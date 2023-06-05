@@ -30,6 +30,7 @@ std::vector<String> addr_cache;
 void R_LOG(String chan, String data);
 bool is_online(String addr);
 void cache_online();
+void sdi_measure();
 
 void setup()
 {
@@ -59,67 +60,48 @@ void setup()
 void loop() 
 {
     static uint32_t last_time;
-    static uint8_t sdi_flag = 0;
-    static String  sdi_reply;
-    static boolean reply_ready = false;
+
     if (micros() - last_time >= PERIOD && sdi_ready)
     {
         last_time += PERIOD;
-        sdi_ready = false;
-        sdi_flag = 1;
+        sdi_measure();
     }
-    for(int x = 0; x < num_sensors; x++)
-    {
-        int avail = sdi12_bus.available();
-        if (avail < 0) 
-        {
-            sdi12_bus.clearBuffer();  // Buffer is full,clear.
-        } else if (avail > 0) {
-            for (int a = 0; a < avail; a++) 
-            {
-                char inByte2 = sdi12_bus.read();
-                if (inByte2 == '\n') 
-                {
-                    reply_ready = true;
-                } 
-                else {
-                    sdi_reply += String(inByte2);
-                }
-            }
-        }
 
-        if (reply_ready)
-        {
-            R_LOG("SDI-12", "Reply: "+ sdi_reply);
-            reply_ready = false;  // Reset String for next SDI-12 message.
-            sdi_reply   = "";
-            if(sdi_flag == 2) { sdi_flag = 3; }
-        }
-        if (sdi_flag)
-        {
-            if(sdi_flag == 1)
-            {
-                sdi_flag = 2;
-                sdi12_bus.sendCommand(addr_cache[x] + "M!");
-                R_LOG("SDI-12", "Sent: " + addr_cache[x] + "M!");
-            }
-            if(sdi_flag == 3)
-            {
-                sdi_flag = 0;
-                delay(2000);
-                sdi12_bus.sendCommand(addr_cache[x] + "D0!");
-                R_LOG("SDI-12", "Sent: " + addr_cache[x] + "D0!");
-                sdi12_bus.clearBuffer();
-            }
-        }
-    }
-    
-    sdi_ready = true;
 }
 
-void sdi_measuer()
+void sdi_measure()
 {
+    sdi_ready = false;
+    static String sdi_response;
+    static String test;
+    std::string testing;
+    std::string testing2;
+    for(int x = 0; x < num_sensors; x++)
+    {
+        sdi_response = "";
+        sdi12_bus.sendCommand(addr_cache[x] + "M!");
+        R_LOG("SDI-12", "Sent: " + addr_cache[x] + "M!");
+        delay(100);
+
+        sdi_response = sdi12_bus.readString();
+        R_LOG("SDI-12", "Reply: " + sdi_response);
+        /** Adding 1 second padding, probably not needed*/
+        uint8_t wait = sdi_response.substring(1, 4).toInt();
+        uint32_t wait_ms = (wait+1)*1000;
+        R_LOG("SDI-12", "Pausing for: " + String(wait+1));
+        delay(wait_ms);
+
+        sdi_response = "";
+        sdi12_bus.sendCommand(addr_cache[x] + "D0!");
+        R_LOG("SDI-12", "Sent: " + addr_cache[x] + "D0!");
+        delay(100);
+
+        sdi_response = sdi12_bus.readString();
+        R_LOG("SDI-12", "Reply: " + sdi_response);
+        sdi12_bus.clearBuffer();
+    }
     
+    sdi_ready = true;   
 }
 
 /**
