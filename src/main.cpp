@@ -70,24 +70,6 @@ void loop()
         sdi_flag = 1;
     }
 
-    int avail = sdi12_bus.available();
-    if (avail < 0) 
-    {
-        sdi12_bus.clearBuffer();  // Buffer is full,clear.
-    } else if (avail > 0) {
-        for (int a = 0; a < avail; a++) 
-        {
-            char inByte2 = sdi12_bus.read();
-            if (inByte2 == '\n') 
-            {
-                reply_ready = true;
-            } 
-            else {
-                sdi_reply += String(inByte2);
-            }
-        }
-    }
-
     for(int x = 0; x < num_sensors; x++)
     {
         if (sdi_flag)
@@ -105,6 +87,24 @@ void loop()
                 sdi12_bus.sendCommand(addr_cache[x] + "D0!");
                 R_LOG("SDI-12", "Sent: " + addr_cache[x] + "D0!");
                 sdi12_bus.clearBuffer();
+            }
+        }
+
+        int avail = sdi12_bus.available();
+        if (avail < 0) 
+        {
+            sdi12_bus.clearBuffer();  // Buffer is full,clear.
+        } else if (avail > 0) {
+            for (int a = 0; a < avail; a++) 
+            {
+                char inByte2 = sdi12_bus.read();
+                if (inByte2 == '\n') 
+                {
+                    reply_ready = true;
+                } 
+                else {
+                    sdi_reply += String(inByte2);
+                }
             }
         }
 
