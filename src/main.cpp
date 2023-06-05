@@ -98,27 +98,24 @@ void loop()
 
     if (sdi_flag)
     {
-        if(sdi_flag == 1)
+        for(int x = 0; x < num_sensors; x++)
         {
-            sdi_flag = 2;
-            for(int x = 0; x < num_sensors; x++)
+            if(sdi_flag == 1)
             {
+                sdi_flag = 2;
                 sdi12_bus.sendCommand(addr_cache[x] + "M!");
                 R_LOG("SDI-12", "Sent: " + addr_cache[x] + "M!");
             }
-        }
-        if(sdi_flag == 3)
-        {
-            sdi_flag = 0;
-            for(int x = 0; x < num_sensors; x++)
+            if(sdi_flag == 3)
             {
+                sdi_flag = 0;
                 delay(2000);
                 sdi12_bus.sendCommand(addr_cache[x] + "D0!");
                 R_LOG("SDI-12", "Sent: " + addr_cache[x] + "D0!");
                 sdi12_bus.clearBuffer();
             }
-            sdi_ready = true;
         }
+        sdi_ready = true;
     }
 }
 
