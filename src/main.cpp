@@ -10,6 +10,7 @@
  */
 #include <RAK13010_SDI12.h>
 #include <vector>
+#include <map>
 
 /** Pin setup */
 #define TX_PIN WB_IO6 // SDI-12 data bus, TX
@@ -25,6 +26,8 @@ bool sdi_ready = true;
 
 uint8_t num_sensors;
 std::vector<String> addr_cache;
+std::map<String, uint16_t> data_set;
+std::map<uint16_t, uint16_t> ds_lookup;
 
 /** Forward declaration */
 void R_LOG(String chan, String data);
@@ -49,7 +52,9 @@ void setup()
         }
     }
 
-    R_LOG("SDI-12", "Opening SDI-12 bus.");
+    ds_lookup.insert({22667, 0});
+
+    R_LOG("SDI-12", "Starting SDI-12 bus");
     sdi12_bus.begin();
     delay(500);
 
@@ -81,21 +86,30 @@ void sdi_measure()
         delay(100);
 
         sdi_response = sdi12_bus.readString();
+        sdi_response.trim();
         R_LOG("SDI-12", "Reply: " + sdi_response);
-        /** Adding 1 second padding, probably not needed*/
+        /** Added 1 second padding */
         uint8_t wait = sdi_response.substring(1, 4).toInt();
         uint32_t wait_ms = (wait+1)*1000;
         R_LOG("SDI-12", "Pausing for: " + String(wait+1));
         delay(wait_ms);
 
-        sdi_response = "";
-        sdi12_bus.sendCommand(addr_cache[x] + "D0!");
-        R_LOG("SDI-12", "Sent: " + addr_cache[x] + "D0!");
-        delay(100);
+        uint16_t ds_amt = data_set[addr_cache[x]];
 
-        sdi_response = sdi12_bus.readString();
-        R_LOG("SDI-12", "Reply: " + sdi_response);
-        sdi12_bus.clearBuffer();
+        for(int y = 0; y <= ds_amt; y++)
+        {
+            sdi_response = "";
+            sdi12_bus.sendCommand(addr_cache[x] + "D" + String(y) + "!");
+            R_LOG("SDI-12", "Sent: " + addr_cache[x] + "D" + String(y) + "!");
+            delay(100);
+
+            /** Drop first byte, repeated address*/
+            if(y == 0) { sdi12_bus.read(); }
+            sdi_response = sdi12_bus.readString();
+            sdi_response.trim();
+            R_LOG("SDI-12", "Reply: " + sdi_response);
+            sdi12_bus.clearBuffer();
+        }
     }
     
     sdi_ready = true;   
@@ -111,8 +125,20 @@ void cache_online()
     {
         if(is_online(String(x)))
         {
+            static String sdi_response;
             R_LOG("SDI-12", "Address cached " + String(x));
             addr_cache.push_back(String(x));
+
+            sdi_response = "";
+            sdi12_bus.sendCommand(String(x) + "I!");
+            R_LOG("SDI-12", "Sent: " + String(x) + "I!");
+            delay(100);
+
+            sdi_response = sdi12_bus.readString();
+            sdi_response.trim();
+            uint16_t sensor_id = sdi_response.substring(20).toInt();
+            R_LOG("SDI-12", "Reply: " + String(sensor_id));
+            data_set.insert({String(x), ds_lookup[sensor_id]});
         }
     }
 
