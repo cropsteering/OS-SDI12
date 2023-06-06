@@ -8,25 +8,36 @@
  * @copyright Copyright (c) 2023
  * 
  */
+
 #include <RAK13010_SDI12.h>
 #include <vector>
 #include <map>
 
-/** Pin setup */
-#define TX_PIN WB_IO6 // SDI-12 data bus, TX
-#define RX_PIN WB_IO5 // SDI-12 data bus, RX
-#define OE WB_IO4	  // Output enable
-
+/** Pin setup 
+ * SDI-12 data bus, TX
+ * SDI-12 data bus, RX
+ * Output enable
+ * 
+*/
+#define TX_PIN WB_IO6
+#define RX_PIN WB_IO5
+#define OE     WB_IO4
+/** Turn on/off debug output */
 #define DEBUG 1
 
+/** RAK SDI-12 Lib */
 RAK_SDI12 sdi12_bus(RX_PIN,TX_PIN,OE);
-
+/** Wait period between sensor readings */
 uint32_t PERIOD = 15000000;
+/** Is the SDI-12 bus ready */
 bool sdi_ready = true;
-
+/** Number of online sensors */
 uint8_t num_sensors;
+/** Cache of online sensor addresses */
 std::vector<String> addr_cache;
+/** Lookup for current sensors data set i.e D0-D9 */
 std::map<String, uint16_t> data_set;
+/** Lookup of known sensor IDs and their data set count */
 std::map<uint16_t, uint16_t> ds_lookup;
 
 /** Forward declaration */
@@ -35,6 +46,10 @@ bool is_online(String addr);
 void cache_online();
 void sdi_measure();
 
+/**
+ * @brief Setup firmware
+ * 
+ */
 void setup()
 {
     pinMode(WB_IO2, OUTPUT);
@@ -52,6 +67,7 @@ void setup()
         }
     }
 
+    /** Add known sensors to lookup array */
     ds_lookup.insert({22667, 0});
 
     R_LOG("SDI-12", "Starting SDI-12 bus");
@@ -62,18 +78,27 @@ void setup()
     cache_online();
 }
 
+/**
+ * @brief Firmwares main loop
+ * Run periodic measure
+ * 
+ */
 void loop() 
 {
     static uint32_t last_time;
-
     if (micros() - last_time >= PERIOD && sdi_ready)
     {
         last_time += PERIOD;
         sdi_measure();
     }
-
 }
 
+/**
+ * @brief Poll SDI-12 sensor for data
+ * Measure: [a]M! - prepares sensor for reading and returns reading info
+ * Data: [a]D[0-9]! - Ask sensor for all data values
+ * 
+ */
 void sdi_measure()
 {
     sdi_ready = false;
@@ -117,6 +142,7 @@ void sdi_measure()
 
 /**
  * @brief Cache all online SDI-12 sensor addresses
+ * Info: [a]I! - Returns information about the sensor
  * 
  */
 void cache_online()
@@ -167,7 +193,7 @@ void cache_online()
  * @brief Sends a basic ack command and if it gets a reply
  * the SDI-12 sensor at that address is confirmed online
  * 
- * Sends basic acknowledge command [address][!]
+ * Sends basic acknowledge command [a][!]
  * 
  * @param addr 
  * @return true SDI-12 sensor found
@@ -207,8 +233,8 @@ bool is_online(String addr)
 /**
  * @brief 
  * 
- * @param chan 
- * @param data 
+ * @param chan Output channel
+ * @param data String to output
  */
 void R_LOG(String chan, String data)
 {
