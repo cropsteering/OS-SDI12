@@ -17,7 +17,6 @@
  * SDI-12 data bus, TX
  * SDI-12 data bus, RX
  * Output enable
- * 
 */
 #define TX_PIN WB_IO6
 #define RX_PIN WB_IO5
