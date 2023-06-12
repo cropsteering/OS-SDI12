@@ -131,6 +131,7 @@ void sdi_measure()
         delay(wait_ms);
 
         uint16_t ds_amt = data_set[addr_cache[x]];
+        String mqtt_splice;
 
         for(int y = 0; y <= ds_amt; y++)
         {
@@ -144,9 +145,15 @@ void sdi_measure()
             sdi_response = sdi12_bus.readString();
             sdi_response.trim();
             R_LOG("SDI-12", "Reply: " + sdi_response);
-            mqtt_lib.mqtt_publish(addr_cache[x], sdi_response);
+            if(y != ds_amt)
+            {
+                mqtt_splice += sdi_response + "+";
+            } else {
+                 mqtt_splice += sdi_response;
+            }
             sdi12_bus.clearBuffer();
         }
+        mqtt_lib.mqtt_publish(addr_cache[x], mqtt_splice);
     }
     sdi_ready = true;   
 }
