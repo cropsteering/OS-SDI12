@@ -9,7 +9,9 @@
  * 
  */
 
+#include <Arduino.h>
 #include <RAK13010_SDI12.h>
+#include <MQTT.h>
 #include <vector>
 #include <map>
 
@@ -26,6 +28,8 @@
 
 /** RAK SDI-12 Lib */
 RAK_SDI12 sdi12_bus(RX_PIN,TX_PIN,OE);
+/** MQTT Lib */
+MQTT mqtt_lib;
 /** Wait period between sensor readings */
 uint32_t PERIOD = 15000000;
 /** Is the SDI-12 bus ready */
@@ -44,6 +48,7 @@ void R_LOG(String chan, String data);
 bool is_online(String addr);
 void cache_online();
 void sdi_measure();
+void set_lookup(String addr);
 
 /**
  * @brief Setup firmware
@@ -66,7 +71,11 @@ void setup()
         }
     }
 
+    /** Join WiFi and connect to MQTT */
+    mqtt_lib.mqtt_setup();
+
     /** Add known sensors to lookup array */
+    /** Acclima TDR-310W */
     ds_lookup.insert({22667, 0});
 
     R_LOG("SDI-12", "Starting SDI-12 bus");
@@ -84,6 +93,9 @@ void setup()
  */
 void loop() 
 {
+    /** Loop our MQTT lib */
+    mqtt_lib.mqtt_loop();
+    /** Measure every X seconds if SDI-12 bus is ready */
     static uint32_t last_time;
     if (micros() - last_time >= PERIOD && sdi_ready)
     {
@@ -132,10 +144,10 @@ void sdi_measure()
             sdi_response = sdi12_bus.readString();
             sdi_response.trim();
             R_LOG("SDI-12", "Reply: " + sdi_response);
+            mqtt_lib.mqtt_publish(addr_cache[x], sdi_response);
             sdi12_bus.clearBuffer();
         }
     }
-    
     sdi_ready = true;   
 }
 
@@ -146,24 +158,14 @@ void sdi_measure()
  */
 void cache_online()
 {
+    sdi_ready = false;
     for(int x = 0; x <= 9; x++)
     {
         if(is_online(String(x)))
         {
-            static String sdi_response;
             R_LOG("SDI-12", "Address cached " + String(x));
             addr_cache.push_back(String(x));
-
-            sdi_response = "";
-            sdi12_bus.sendCommand(String(x) + "I!");
-            R_LOG("SDI-12", "Sent: " + String(x) + "I!");
-            delay(100);
-
-            sdi_response = sdi12_bus.readString();
-            sdi_response.trim();
-            uint16_t sensor_id = sdi_response.substring(20).toInt();
-            R_LOG("SDI-12", "Reply: " + String(sensor_id));
-            data_set.insert({String(x), ds_lookup[sensor_id]});
+            set_lookup(String(x));
         }
     }
 
@@ -186,6 +188,7 @@ void cache_online()
     // }
 
     num_sensors = addr_cache.size();
+    sdi_ready = true; 
 }
 
 /**
@@ -227,6 +230,26 @@ bool is_online(String addr)
     }
 
     return found;
+}
+
+/**
+ * @brief Poll sensor for data set info
+ * 
+ * @param addr 
+ */
+void set_lookup(String addr)
+{
+    static String sdi_response;
+    sdi_response = "";
+    sdi12_bus.sendCommand(addr + "I!");
+    R_LOG("SDI-12", "Sent: " + addr + "I!");
+    delay(100);
+
+    sdi_response = sdi12_bus.readString();
+    sdi_response.trim();
+    uint16_t sensor_id = sdi_response.substring(20).toInt();
+    R_LOG("SDI-12", "Reply: " + String(sensor_id));
+    data_set.insert({addr, ds_lookup[sensor_id]});
 }
 
 /**
