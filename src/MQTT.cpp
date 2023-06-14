@@ -97,10 +97,7 @@ String parse_data(String data)
     uint16_t size = seglist.size();
     for(int x = 0; x < size; x++)
     {
-        if(x == 0)
-        {
-            /** Do nothing, dropping address */
-        } else if (x == size-1) {
+        if (x == size-1) {
             mqtt_data += String(seglist[x].c_str());
         } else {
             mqtt_data += String(seglist[x].c_str()) + ", ";

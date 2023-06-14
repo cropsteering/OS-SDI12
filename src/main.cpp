@@ -14,6 +14,7 @@
 #include <MQTT.h>
 #include <vector>
 #include <map>
+#include <sstream>
 
 /** Pin setup 
  * SDI-12 data bus, TX
@@ -49,6 +50,7 @@ bool is_online(String addr);
 void cache_online();
 void sdi_measure();
 void set_lookup(String addr);
+String strip_addr(String data);
 
 /**
  * @brief Setup firmware
@@ -75,8 +77,8 @@ void setup()
     mqtt_lib.mqtt_setup();
 
     /** Add known sensors to lookup array */
-    /** Acclima TDR-310W */
-    ds_lookup.insert({22667, 0});
+    ds_lookup.insert({22667, 0});   //Acclima TDR-310W 
+    ds_lookup.insert({0, 2});       //Stevens dev sensor
 
     R_LOG("SDI-12", "Starting SDI-12 bus");
     sdi12_bus.begin();
@@ -140,10 +142,11 @@ void sdi_measure()
             R_LOG("SDI-12", "Sent: " + addr_cache[x] + "D" + String(y) + "!");
             delay(100);
 
-            /** Drop first byte, repeated address*/
+            /** Drop first byte, repeated address */
             if(y == 0) { sdi12_bus.read(); }
             sdi_response = sdi12_bus.readString();
             sdi_response.trim();
+            sdi_response = strip_addr(sdi_response);
             R_LOG("SDI-12", "Reply: " + sdi_response);
             if(y != ds_amt)
             {
@@ -156,6 +159,33 @@ void sdi_measure()
         mqtt_lib.mqtt_publish(addr_cache[x], mqtt_splice);
     }
     sdi_ready = true;   
+}
+
+String strip_addr(String data)
+{
+    std::stringstream ss(data.c_str());
+    std::string segment;
+    std::vector<std::string> seglist;
+    String stripped;
+    while(std::getline(ss, segment, '+'))
+    {
+        seglist.push_back(segment);
+    }
+
+    uint16_t size = seglist.size();
+    for(int x = 0; x < size; x++)
+    {
+        if(x == 0)
+        {
+            /** Drop first segment as it's the sensors address */
+        } else if (x == size-1) {
+            stripped += String(seglist[x].c_str());
+        } else {
+            stripped += String(seglist[x].c_str()) + "+";
+        }
+    }
+
+    return stripped;
 }
 
 /**
