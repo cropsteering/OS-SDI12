@@ -24,4 +24,7 @@ class MQTT
     void mqtt_publish(String addr, String data);
 };
 
+extern uint32_t PERIOD;
+void chng_addr(String addr_old, String addr_new);
+
 #endif

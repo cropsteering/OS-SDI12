@@ -22,6 +22,8 @@
 WiFiClientSecure secure_client;
 /** MQTT client */
 PubSubClient mqtt_client(secure_client);
+/** Use CSV or individual readings */
+bool CSV = true;
 
 /** Forward declaration */
 void wifi_connect();
@@ -29,6 +31,7 @@ String parse_data(String data);
 void mqtt_connect();
 void mqtt_downlink(char* topic, byte* message, unsigned int length);
 void MQTT_LOG(String chan, String data);
+void parse_config(String data);
 
 /**
  * @brief Connect to WiFi and setup MQTT
@@ -63,15 +66,34 @@ void MQTT::mqtt_publish(String addr, String data)
 {
     if(mqtt_client.connected()) 
     {
-        String mqtt_csv = parse_data(data);
-        String mqtt_sub = String(MQTT_USER) + "/" + ZONE_NAME + "/" + addr;
-        if(mqtt_client.publish(mqtt_sub.c_str(), mqtt_csv.c_str()))
+        String mqtt_data = parse_data(data);
+        String mqtt_topic = String(MQTT_USER) + "/" + ZONE_NAME + "/" + addr;
+        if(CSV)
         {
-            MQTT_LOG("MQTT", "Publish");
-            MQTT_LOG("MQTT", mqtt_sub);
-            MQTT_LOG("MQTT", mqtt_csv);
+            if(mqtt_client.publish(mqtt_topic.c_str(), mqtt_data.c_str()))
+            {
+                MQTT_LOG("MQTT", "Publish");
+                MQTT_LOG("MQTT", mqtt_topic);
+                MQTT_LOG("MQTT", mqtt_data);
+            } else {
+                mqtt_connect(); 
+            }
         } else {
-            mqtt_connect(); 
+            std::stringstream ss(data.c_str());
+            std::string segment;
+            char value = 'a';
+            while(std::getline(ss, segment, '+'))
+            {
+                mqtt_topic = String(MQTT_USER) + "/" + ZONE_NAME + "/" + addr + "/" + String(value++);
+                if(mqtt_client.publish(mqtt_topic.c_str(), segment.c_str()))
+                {
+                    MQTT_LOG("MQTT", "Publish");
+                    MQTT_LOG("MQTT", mqtt_topic);
+                    MQTT_LOG("MQTT", String(segment.c_str()));
+                } else {
+                    mqtt_connect(); 
+                }
+            }
         }
     } else {
         mqtt_connect(); 
@@ -85,10 +107,10 @@ void MQTT::mqtt_publish(String addr, String data)
  */
 String parse_data(String data)
 {
+    String mqtt_data;
     std::stringstream ss(data.c_str());
     std::string segment;
     std::vector<std::string> seglist;
-    String mqtt_data;
     while(std::getline(ss, segment, '+'))
     {
         seglist.push_back(segment);
@@ -146,6 +168,7 @@ void mqtt_connect()
         if(mqtt_client.connect(MQTT_ID, MQTT_USER, MQTT_PASS))
         {
             MQTT_LOG("MQTT", "Connected to broker");
+            mqtt_client.subscribe(MQTT_CONFIG.c_str());
         } else {
             MQTT_LOG("MQTT", "Error code: " + String(mqtt_client.state()));
             delay(5000);
@@ -164,7 +187,60 @@ void mqtt_connect()
  */
 void mqtt_downlink(char* topic, byte* message, unsigned int length)
 {
-    MQTT_LOG("MQTT", "MQTT downlink recieved");
+    String topic_string = String(topic);
+    String mqtt_data;
+    if(topic_string == MQTT_CONFIG)
+    {
+        for(int x = 0; x < length; x++)
+        {
+            mqtt_data += (char)message[x];
+        }
+        parse_config(mqtt_data);
+    } else {
+        MQTT_LOG("MQTT", "MQTT downlink recieved");
+    }
+}
+
+/**
+ * @brief Parse incoming MQTT data for config changes
+ * 
+ * @param data 
+ */
+void parse_config(String data)
+{
+    String config_data;
+    std::stringstream ss(data.c_str());
+    std::string segment;
+    std::vector<std::string> seglist;
+    while(std::getline(ss, segment, '+'))
+    {
+        seglist.push_back(segment);
+    }
+
+    u_int16_t cmd_int = stoi(seglist[0]);
+    switch(cmd_int)
+    {
+        /** CMD 0: CSV */
+        case 0:
+            if(seglist[1] == "true")
+            {
+                CSV = true;
+                MQTT_LOG("MQTT", "CSV set to true");
+            } else {
+                CSV = false;
+                MQTT_LOG("MQTT", "CSV set to false");
+            }
+        break;
+        /** CMD 1: SLEEP PERIOD */
+        case 1:
+            PERIOD = stoi(seglist[1])*1000000;
+            MQTT_LOG("MQTT", "Delay set to " + String(seglist[1].c_str()));
+        break;
+        /** CMD 2: CHANGE SDI-12 ADDRESS */
+        case 2:
+            chng_addr(seglist[1].c_str(), seglist[2].c_str());
+        break;
+    }
 }
 
 /**

@@ -161,6 +161,12 @@ void sdi_measure()
     sdi_ready = true;   
 }
 
+/**
+ * @brief Strip SDI-12 address from reply
+ * 
+ * @param data 
+ * @return String 
+ */
 String strip_addr(String data)
 {
     std::stringstream ss(data.c_str());
@@ -195,34 +201,37 @@ String strip_addr(String data)
  */
 void cache_online()
 {
+    addr_cache.clear();
     sdi_ready = false;
     for(int x = 0; x <= 9; x++)
     {
         if(is_online(String(x)))
         {
-            R_LOG("SDI-12", "Address cached " + String(x));
+            R_LOG("SDI-12", "Address cached: " + String(x));
             addr_cache.push_back(String(x));
             set_lookup(String(x));
         }
     }
 
-    // for (char y = 'a'; y <= 'z'; y++)
-    // {
-    //     if(is_online(String(y)))
-    //     {
-    //         R_LOG("SDI-12", "Address cached" + String(y));
-    //         addr_cache.push_back(String(y));
-    //     }
-    // }
+    for (char y = 'a'; y <= 'z'; y++)
+    {
+        if(is_online(String(y)))
+        {
+            R_LOG("SDI-12", "Address cached: " + String(y));
+            addr_cache.push_back(String(y));
+            set_lookup(String(y));
+        }
+    }
 
-    // for (char z = 'A'; z <= 'Z'; z++)
-    // {
-    //     if(is_online(String(z)))
-    //     {
-    //         R_LOG("SDI-12", "Address cached" + String(z));
-    //         addr_cache.push_back(String(z));
-    //     }
-    // }
+    for (char z = 'A'; z <= 'Z'; z++)
+    {
+        if(is_online(String(z)))
+        {
+            R_LOG("SDI-12", "Address cached: " + String(z));
+            addr_cache.push_back(String(z));
+            set_lookup(String(z));
+        }
+    }
 
     num_sensors = addr_cache.size();
     sdi_ready = true; 
@@ -255,12 +264,12 @@ bool is_online(String addr)
 
         if(avail > 0)
         {
-            R_LOG("SDI-12", "Sensor found on " + addr);
+            R_LOG("SDI-12", "Sensor found on: " + addr);
             sdi12_bus.clearBuffer();
             found = true;
             return true;
         } else {
-            R_LOG("SDI-12", "No sensor found on " + addr);
+            R_LOG("SDI-12", "No sensor found on: " + addr);
             sdi12_bus.clearBuffer();
             found = false;
         }
@@ -276,6 +285,7 @@ bool is_online(String addr)
  */
 void set_lookup(String addr)
 {
+    data_set.clear();
     static String sdi_response;
     sdi_response = "";
     sdi12_bus.sendCommand(addr + "I!");
@@ -287,6 +297,21 @@ void set_lookup(String addr)
     uint16_t sensor_id = sdi_response.substring(20).toInt();
     R_LOG("SDI-12", "Reply: " + String(sensor_id));
     data_set.insert({addr, ds_lookup[sensor_id]});
+}
+
+/**
+ * @brief Change SDI-12 sensor address
+ * 
+ * @param addr_old 
+ * @param addr_new 
+ */
+void chng_addr(String addr_old, String addr_new)
+{
+    sdi12_bus.sendCommand(addr_old + "A" + addr_new + "!");
+    R_LOG("SDI-12", "Sent: " + addr_old + "A" + addr_new + "!");
+    delay(100);
+    sdi12_bus.clearBuffer();
+    cache_online();
 }
 
 /**

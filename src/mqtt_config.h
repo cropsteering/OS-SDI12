@@ -28,6 +28,7 @@ const char* MQTT_ID = "";
 const char* MQTT_USER = "";
 const char* MQTT_PASS = "";
 const String ZONE_NAME = "Zone1";
+const String MQTT_CONFIG = String(MQTT_USER) + "/" + String(MQTT_ID) + "/config";
 
 /** Secure client cert */
 const char* server_root_ca = \
