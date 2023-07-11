@@ -1,6 +1,6 @@
 /**
  * @file MQTT.cpp
- * @author Jamie Howse (you@domain.com)
+ * @author Jamie Howse (r4wknet@gmail.com)
  * @brief 
  * @version 0.1
  * @date 2023-06-10
@@ -72,7 +72,7 @@ void MQTT::mqtt_publish(String addr, String data)
         {
             if(mqtt_client.publish(mqtt_topic.c_str(), mqtt_data.c_str()))
             {
-                MQTT_LOG("MQTT", "Publish");
+                MQTT_LOG("MQTT", "Publish CSV");
                 MQTT_LOG("MQTT", mqtt_topic);
                 MQTT_LOG("MQTT", mqtt_data);
             } else {
@@ -87,7 +87,7 @@ void MQTT::mqtt_publish(String addr, String data)
                 mqtt_topic = String(MQTT_USER) + "/" + ZONE_NAME + "/" + addr + "/" + String(value++);
                 if(mqtt_client.publish(mqtt_topic.c_str(), segment.c_str()))
                 {
-                    MQTT_LOG("MQTT", "Publish");
+                    MQTT_LOG("MQTT", "Publish SEGMENT");
                     MQTT_LOG("MQTT", mqtt_topic);
                     MQTT_LOG("MQTT", String(segment.c_str()));
                 } else {
@@ -230,15 +230,21 @@ void parse_config(String data)
                 CSV = false;
                 MQTT_LOG("MQTT", "CSV set to false");
             }
+            flash_bool("csv", CSV, false);
         break;
-        /** CMD 1: SLEEP PERIOD */
+        /** CMD 1: Sleep period */
         case 1:
-            PERIOD = stoi(seglist[1])*1000000;
+            delay_time = stoi(seglist[1])*1000000;
+            flash_32("period", delay_time, false);
             MQTT_LOG("MQTT", "Delay set to " + String(seglist[1].c_str()));
         break;
-        /** CMD 2: CHANGE SDI-12 ADDRESS */
+        /** CMD 2: Change SDI-12 address */
         case 2:
             chng_addr(seglist[1].c_str(), seglist[2].c_str());
+        break;
+        /** CMD 3: Add sensor data set */
+        case 3:
+            flash_32(seglist[1].c_str(), stoi(seglist[2]), true);
         break;
     }
 }

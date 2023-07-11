@@ -1,6 +1,6 @@
 /**
  * @file main.cpp
- * @author Jamie Howse (you@domain.com)
+ * @author Jamie Howse (r4wknet@gmail.com)
  * @brief 
  * @version 0.1
  * @date 2023-06-05
@@ -15,6 +15,7 @@
 #include <vector>
 #include <map>
 #include <sstream>
+#include <Preferences.h>
 
 /** Pin setup 
  * SDI-12 data bus, TX
@@ -28,11 +29,11 @@
 #define DEBUG 1
 
 /** RAK SDI-12 Lib */
-RAK_SDI12 sdi12_bus(RX_PIN,TX_PIN,OE);
+RAK_SDI12 sdi12_bus(RX_PIN, TX_PIN, OE);
 /** MQTT Lib */
 MQTT mqtt_lib;
 /** Wait period between sensor readings */
-uint32_t PERIOD = 15000000;
+uint32_t delay_time;
 /** Is the SDI-12 bus ready */
 bool sdi_ready = true;
 /** Number of online sensors */
@@ -40,9 +41,9 @@ uint8_t num_sensors;
 /** Cache of online sensor addresses */
 std::vector<String> addr_cache;
 /** Lookup for current sensors data set i.e D0-D9 */
-std::map<String, uint16_t> data_set;
-/** Lookup of known sensor IDs and their data set count */
-std::map<uint16_t, uint16_t> ds_lookup;
+std::map<String, uint32_t> data_set;
+/** Preferences instance */
+Preferences flash_storage;
 
 /** Forward declaration */
 void R_LOG(String chan, String data);
@@ -73,12 +74,16 @@ void setup()
         }
     }
 
+    /** Initialize flash storage */
+    R_LOG("FLASH", "Starting flash storage");
+    flash_storage.begin("SDI12", false);
+    delay_time = flash_storage.getUInt("period", 15000000);
+    R_LOG("FLASH", "Read: Delay time " + String(delay_time));
+    CSV = flash_storage.getBool("csv", true);
+    R_LOG("FLASH", "Read: CSV " + String(CSV));
+
     /** Join WiFi and connect to MQTT */
     mqtt_lib.mqtt_setup();
-
-    /** Add known sensors to lookup array */
-    ds_lookup.insert({22667, 0});   //Acclima TDR-310W 
-    ds_lookup.insert({0, 2});       //Stevens dev sensor
 
     R_LOG("SDI-12", "Starting SDI-12 bus");
     sdi12_bus.begin();
@@ -99,9 +104,9 @@ void loop()
     mqtt_lib.mqtt_loop();
     /** Measure every X seconds if SDI-12 bus is ready */
     static uint32_t last_time;
-    if (micros() - last_time >= PERIOD && sdi_ready)
+    if ((micros() - last_time) >= delay_time && sdi_ready)
     {
-        last_time += PERIOD;
+        last_time += delay_time;
         sdi_measure();
     }
 }
@@ -126,13 +131,13 @@ void sdi_measure()
         sdi_response = sdi12_bus.readString();
         sdi_response.trim();
         R_LOG("SDI-12", "Reply: " + sdi_response);
-        /** Added 1 second padding */
         uint8_t wait = sdi_response.substring(1, 4).toInt();
+        /** Added 1 second padding */
         uint32_t wait_ms = (wait+1)*1000;
         R_LOG("SDI-12", "Pausing for: " + String(wait+1));
         delay(wait_ms);
 
-        uint16_t ds_amt = data_set[addr_cache[x]];
+        uint32_t ds_amt = data_set[addr_cache[x]];
         String mqtt_splice;
 
         for(int y = 0; y <= ds_amt; y++)
@@ -142,7 +147,7 @@ void sdi_measure()
             R_LOG("SDI-12", "Sent: " + addr_cache[x] + "D" + String(y) + "!");
             delay(100);
 
-            /** Drop first byte, repeated address */
+            /** Drop first byte, sensor ready reply */
             if(y == 0) { sdi12_bus.read(); }
             sdi_response = sdi12_bus.readString();
             sdi_response.trim();
@@ -253,15 +258,11 @@ bool is_online(String addr)
 
     for(int x = 0; x < 3; x++)
     {
-        String sdi_command;
-        sdi_command = "";
-        sdi_command += addr;
-        sdi_command += "!";
-        sdi12_bus.sendCommand(sdi_command);
+        sdi12_bus.sendCommand(addr + "!");
+        R_LOG("SDI-12", "Sent: " + addr + "!");
         delay(100);
 
         uint16_t avail = sdi12_bus.available();
-
         if(avail > 0)
         {
             R_LOG("SDI-12", "Sensor found on: " + addr);
@@ -296,11 +297,13 @@ void set_lookup(String addr)
     sdi_response.trim();
     uint16_t sensor_id = sdi_response.substring(20).toInt();
     R_LOG("SDI-12", "Reply: " + String(sensor_id));
-    data_set.insert({addr, ds_lookup[sensor_id]});
+    R_LOG("FLASH", "Read: Data set " + String(sensor_id));
+    data_set.insert({addr, flash_storage.getUInt(std::to_string(sensor_id).c_str(), 0)});
 }
 
 /**
  * @brief Change SDI-12 sensor address
+ * and cache online sensor addresses again
  * 
  * @param addr_old 
  * @param addr_new 
@@ -312,6 +315,34 @@ void chng_addr(String addr_old, String addr_new)
     delay(100);
     sdi12_bus.clearBuffer();
     cache_online();
+}
+
+/**
+ * @brief Save key:value data to flash
+ * 
+ * @param key char
+ * @param value uint32_t
+ * @param restart restart SDI-12 sensor lookup
+ */
+void flash_32(const char* key, uint32_t value, bool restart)
+{
+    flash_storage.putUInt(key, value);
+    R_LOG("FLASH", "Write: " + String(key) + "/" + String(value));
+    if(restart) { cache_online(); }
+}
+
+/**
+ * @brief Save key:value data to flash
+ * 
+ * @param key char
+ * @param value bool
+ * @param restart restart SDI-12 sensor lookup
+ */
+void flash_bool(const char* key, bool value, bool restart)
+{
+    flash_storage.putBool(key, value);
+    R_LOG("FLASH", "Write: " + String(key) + "/" + String(value));
+    if(restart) { cache_online(); }
 }
 
 /**

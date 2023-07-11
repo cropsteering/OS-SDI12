@@ -1,6 +1,6 @@
 /**
  * @file config.h
- * @author Jamie Howse (you@domain.com)
+ * @author Jamie Howse (r4wknet@gmail.com)
  * @brief 
  * @version 0.1
  * @date 2023-06-12

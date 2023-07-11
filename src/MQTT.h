@@ -1,6 +1,6 @@
 /**
  * @file MQTT.h
- * @author Jamie Howse (you@domain.com)
+ * @author Jamie Howse (r4wknet@gmail.com)
  * @brief 
  * @version 0.1
  * @date 2023-06-10
@@ -11,6 +11,8 @@
 
 #ifndef __MQTT_H__
 #define __MQTT_H__
+
+#include <map>
 
 /**
  * @brief MQTT Lib
@@ -24,7 +26,11 @@ class MQTT
     void mqtt_publish(String addr, String data);
 };
 
-extern uint32_t PERIOD;
+/** Overloads for config */
+extern uint32_t delay_time;
+extern bool CSV;
 void chng_addr(String addr_old, String addr_new);
+void flash_32(const char* key, uint32_t value, bool restart);
+void flash_bool(const char* key, bool value, bool restart);
 
 #endif
