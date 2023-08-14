@@ -24,6 +24,10 @@ WiFiClientSecure secure_client;
 PubSubClient mqtt_client(secure_client);
 /** Use CSV or individual readings */
 bool CSV = true;
+/** Give up on trying to connect */
+bool give_up = false;
+/** Retry time for WiFi/MQTT */
+uint32_t connect_time;
 
 /** Forward declaration */
 void wifi_connect();
@@ -44,6 +48,7 @@ void MQTT::mqtt_setup()
     mqtt_client.setKeepAlive(KEEP_ALIVE);
     mqtt_client.setSocketTimeout(KEEP_ALIVE);
     mqtt_client.setCallback(mqtt_downlink);
+    connect_time = 3600000000;
 }
 
 /**
@@ -53,8 +58,18 @@ void MQTT::mqtt_setup()
 void MQTT::mqtt_loop()
 {
     /** Always check MQTT connection */
-    if(!mqtt_client.connected()) { mqtt_connect(); }
-    mqtt_client.loop();
+    if(!give_up)
+    {
+        if(!mqtt_client.connected()) { mqtt_connect(); }
+        mqtt_client.loop();
+    } else {
+        static uint32_t last_time;
+        if ((micros() - last_time) >= connect_time)
+        {
+            last_time += connect_time;
+            wifi_connect();
+        }
+    }
 }
 
 /**
@@ -75,8 +90,6 @@ void MQTT::mqtt_publish(String addr, String data)
                 MQTT_LOG("MQTT", "Publish CSV");
                 MQTT_LOG("MQTT", mqtt_topic);
                 MQTT_LOG("MQTT", mqtt_data);
-            } else {
-                mqtt_connect(); 
             }
         } else {
             std::stringstream ss(data.c_str());
@@ -90,13 +103,9 @@ void MQTT::mqtt_publish(String addr, String data)
                     MQTT_LOG("MQTT", "Publish SEGMENT");
                     MQTT_LOG("MQTT", mqtt_topic);
                     MQTT_LOG("MQTT", String(segment.c_str()));
-                } else {
-                    mqtt_connect(); 
                 }
             }
         }
-    } else {
-        mqtt_connect(); 
     }
 }
 
@@ -137,23 +146,35 @@ String parse_data(String data)
 void wifi_connect()
 {
     delay(10);
-
     MQTT_LOG("WiFi", "Connecting to " + String(SSID));
 
     WiFi.setHostname("SDI-12_data_logger");
     WiFi.begin(SSID, PASSWORD);
 
+    uint8_t wifi_retry;
     while(WiFi.status() != WL_CONNECTED)
     {
+        wifi_retry++;
+        if(wifi_retry == 10) 
+        { 
+            Serial.println(" Failed to connect to WiFi");
+            give_up = true;
+            break; 
+        }
         delay(500);
         MQTT_LOG("WiFi", "Retrying");
     }
 
-    MQTT_LOG("WiFi", "Connected");
-    MQTT_LOG("WiFi", "IP address: " + String(WiFi.localIP().toString()));
+    if(WiFi.status() == WL_CONNECTED) 
+    {
+        MQTT_LOG("WiFi", "Connected");
+        MQTT_LOG("WiFi", "IP address: " + String(WiFi.localIP().toString()));
 
-    secure_client.setTimeout(KEEP_ALIVE);
-    secure_client.setCACert(server_root_ca);
+        secure_client.setTimeout(KEEP_ALIVE);
+        secure_client.setCACert(server_root_ca);
+
+        give_up = false;
+    }
 }
 
 /**
@@ -162,19 +183,27 @@ void wifi_connect()
  */
 void mqtt_connect()
 {
+    uint8_t mqtt_retry;
     while(!mqtt_client.connected() && WiFi.status() == WL_CONNECTED)
     {
         MQTT_LOG("MQTT", "Connecting to broker");
         if(mqtt_client.connect(MQTT_ID, MQTT_USER, MQTT_PASS))
         {
             MQTT_LOG("MQTT", "Connected to broker");
+            give_up = false;
             mqtt_client.subscribe(MQTT_CONFIG.c_str());
         } else {
             MQTT_LOG("MQTT", "Error code: " + String(mqtt_client.state()));
+            mqtt_retry++;
+            if(mqtt_retry == 10)
+            {
+                MQTT_LOG("MQTT", "Failed to connect to MQTT");
+                give_up = true;
+                break; 
+            }
             delay(5000);
         }
     }
-    if(WiFi.status() != WL_CONNECTED) { wifi_connect(); }
 }
 
 /**
@@ -245,6 +274,18 @@ void parse_config(String data)
         /** CMD 3: Add sensor data set */
         case 3:
             flash_32(seglist[1].c_str(), stoi(seglist[2]), true);
+        break;
+        /** CMD 4: Use SD card */
+        case 4:
+            if(seglist[1] == "true")
+            {
+                use_sd = true;
+                MQTT_LOG("SD", "Set to true");
+            } else {
+                use_sd = false;
+                MQTT_LOG("SD", "Set to false");
+            }
+            flash_bool("sd", use_sd, false);
         break;
     }
 }

@@ -12,6 +12,7 @@
 #include <Arduino.h>
 #include <RAK13010_SDI12.h>
 #include <MQTT.h>
+#include <logger.h>
 #include <vector>
 #include <map>
 #include <sstream>
@@ -32,6 +33,8 @@
 RAK_SDI12 sdi12_bus(RX_PIN, TX_PIN, OE);
 /** MQTT Lib */
 MQTT mqtt_lib;
+/** Logger Lib */
+LOGGER logger_lib;
 /** Wait period between sensor readings */
 uint32_t delay_time;
 /** Is the SDI-12 bus ready */
@@ -81,9 +84,12 @@ void setup()
     R_LOG("FLASH", "Read: Delay time " + String(delay_time));
     CSV = flash_storage.getBool("csv", true);
     R_LOG("FLASH", "Read: CSV " + String(CSV));
+    use_sd = flash_storage.getBool("sd", false);
+    R_LOG("FLASH", "Read: SD " + String(use_sd));
 
     /** Join WiFi and connect to MQTT */
     mqtt_lib.mqtt_setup();
+    logger_lib.logger_setup();
 
     R_LOG("SDI-12", "Starting SDI-12 bus");
     sdi12_bus.begin();
@@ -102,11 +108,18 @@ void loop()
 {
     /** Loop our MQTT lib */
     mqtt_lib.mqtt_loop();
+    /** If diconnected turn on SD logging  */
+    if(give_up && !use_log) 
+    { 
+        use_log = true; 
+    } else if(!give_up && use_log) {
+        use_log = false; 
+    }
     /** Measure every X seconds if SDI-12 bus is ready */
     static uint32_t last_time;
     if ((micros() - last_time) >= delay_time && sdi_ready)
     {
-        last_time += delay_time;
+        last_time = micros();
         sdi_measure();
     }
 }
@@ -119,6 +132,7 @@ void loop()
  */
 void sdi_measure()
 {
+    digitalWrite(WB_IO2, HIGH);
     sdi_ready = false;
     static String sdi_response;
     for(int x = 0; x < num_sensors; x++)
@@ -161,9 +175,12 @@ void sdi_measure()
             }
             sdi12_bus.clearBuffer();
         }
+        delay(100);
         mqtt_lib.mqtt_publish(addr_cache[x], mqtt_splice);
+        logger_lib.write_sd(mqtt_splice);
     }
-    sdi_ready = true;   
+    sdi_ready = true;
+    digitalWrite(WB_IO2, LOW);
 }
 
 /**
