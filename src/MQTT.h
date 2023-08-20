@@ -27,12 +27,13 @@ class MQTT
 };
 
 /** Overloads for config */
-extern uint32_t delay_time;
+extern uint64_t delay_time;
 extern bool CSV;
 extern bool give_up;
 extern bool use_sd;
 void chng_addr(String addr_old, String addr_new);
 void flash_32(const char* key, uint32_t value, bool restart);
+void flash_64(const char* key, uint64_t value, bool restart);
 void flash_bool(const char* key, bool value, bool restart);
 
 #endif

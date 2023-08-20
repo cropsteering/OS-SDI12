@@ -12,11 +12,11 @@
 #include <Arduino.h>
 #include <RAK13010_SDI12.h>
 #include <MQTT.h>
-#include <logger.h>
 #include <vector>
 #include <map>
 #include <sstream>
 #include <Preferences.h>
+#include <logger.h>
 
 /** Pin setup 
  * SDI-12 data bus, TX
@@ -36,7 +36,7 @@ MQTT mqtt_lib;
 /** Logger Lib */
 LOGGER logger_lib;
 /** Wait period between sensor readings */
-uint32_t delay_time;
+uint64_t delay_time;
 /** Is the SDI-12 bus ready */
 bool sdi_ready = true;
 /** Number of online sensors */
@@ -80,7 +80,7 @@ void setup()
     /** Initialize flash storage */
     R_LOG("FLASH", "Starting flash storage");
     flash_storage.begin("SDI12", false);
-    delay_time = flash_storage.getUInt("period", 15000000);
+    delay_time = flash_storage.getULong64("period", 15000000);
     R_LOG("FLASH", "Read: Delay time " + String(delay_time));
     CSV = flash_storage.getBool("csv", true);
     R_LOG("FLASH", "Read: CSV " + String(CSV));
@@ -108,18 +108,13 @@ void loop()
 {
     /** Loop our MQTT lib */
     mqtt_lib.mqtt_loop();
-    /** If diconnected turn on SD logging  */
-    if(give_up && !use_log) 
-    { 
-        use_log = true; 
-    } else if(!give_up && use_log) {
-        use_log = false; 
-    }
     /** Measure every X seconds if SDI-12 bus is ready */
     static uint32_t last_time;
     if ((micros() - last_time) >= delay_time && sdi_ready)
     {
         last_time = micros();
+        /** SD card logic */
+        use_log = give_up;
         sdi_measure();
     }
 }
@@ -132,7 +127,6 @@ void loop()
  */
 void sdi_measure()
 {
-    digitalWrite(WB_IO2, HIGH);
     sdi_ready = false;
     static String sdi_response;
     for(int x = 0; x < num_sensors; x++)
@@ -175,12 +169,10 @@ void sdi_measure()
             }
             sdi12_bus.clearBuffer();
         }
-        delay(100);
         mqtt_lib.mqtt_publish(addr_cache[x], mqtt_splice);
         logger_lib.write_sd(mqtt_splice);
     }
-    sdi_ready = true;
-    digitalWrite(WB_IO2, LOW);
+    sdi_ready = true;   
 }
 
 /**
@@ -344,6 +336,20 @@ void chng_addr(String addr_old, String addr_new)
 void flash_32(const char* key, uint32_t value, bool restart)
 {
     flash_storage.putUInt(key, value);
+    R_LOG("FLASH", "Write: " + String(key) + "/" + String(value));
+    if(restart) { cache_online(); }
+}
+
+/**
+ * @brief Save key:value data to flash
+ * 
+ * @param key char
+ * @param value uint64_t
+ * @param restart restart SDI-12 sensor lookup
+ */
+void flash_64(const char* key, uint64_t value, bool restart)
+{
+    flash_storage.putULong64(key, value);
     R_LOG("FLASH", "Write: " + String(key) + "/" + String(value));
     if(restart) { cache_online(); }
 }

@@ -27,7 +27,7 @@ bool CSV = true;
 /** Give up on trying to connect */
 bool give_up = false;
 /** Retry time for WiFi/MQTT */
-uint32_t connect_time;
+uint64_t connect_time;
 
 /** Forward declaration */
 void wifi_connect();
@@ -103,7 +103,7 @@ void MQTT::mqtt_publish(String addr, String data)
                     MQTT_LOG("MQTT", "Publish SEGMENT");
                     MQTT_LOG("MQTT", mqtt_topic);
                     MQTT_LOG("MQTT", String(segment.c_str()));
-                }
+                } 
             }
         }
     }
@@ -145,13 +145,14 @@ String parse_data(String data)
  */
 void wifi_connect()
 {
+    uint8_t wifi_retry;
     delay(10);
+
     MQTT_LOG("WiFi", "Connecting to " + String(SSID));
 
     WiFi.setHostname("SDI-12_data_logger");
     WiFi.begin(SSID, PASSWORD);
 
-    uint8_t wifi_retry;
     while(WiFi.status() != WL_CONNECTED)
     {
         wifi_retry++;
@@ -161,18 +162,16 @@ void wifi_connect()
             give_up = true;
             break; 
         }
-        delay(500);
         MQTT_LOG("WiFi", "Retrying");
+        delay(500);
     }
 
-    if(WiFi.status() == WL_CONNECTED) 
+    if(WiFi.status() == WL_CONNECTED)
     {
         MQTT_LOG("WiFi", "Connected");
         MQTT_LOG("WiFi", "IP address: " + String(WiFi.localIP().toString()));
-
         secure_client.setTimeout(KEEP_ALIVE);
         secure_client.setCACert(server_root_ca);
-
         give_up = false;
     }
 }
@@ -190,8 +189,8 @@ void mqtt_connect()
         if(mqtt_client.connect(MQTT_ID, MQTT_USER, MQTT_PASS))
         {
             MQTT_LOG("MQTT", "Connected to broker");
-            give_up = false;
             mqtt_client.subscribe(MQTT_CONFIG.c_str());
+            give_up = false;
         } else {
             MQTT_LOG("MQTT", "Error code: " + String(mqtt_client.state()));
             mqtt_retry++;
@@ -264,7 +263,7 @@ void parse_config(String data)
         /** CMD 1: Sleep period */
         case 1:
             delay_time = stoi(seglist[1])*1000000;
-            flash_32("period", delay_time, false);
+            flash_64("period", delay_time, false);
             MQTT_LOG("MQTT", "Delay set to " + String(seglist[1].c_str()));
         break;
         /** CMD 2: Change SDI-12 address */
