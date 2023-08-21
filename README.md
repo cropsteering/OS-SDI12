@@ -23,6 +23,10 @@ SDI-12 Data logger, up to 62 addresses
         Turn on or off SD card logging completely
         example: 4+[TRUE/FALSE], 4+FALSE
 
+        /** CMD 5: Change GMT/DST offset */
+        Set timezone and DST
+        example: 5+[GMT OFFSET]+[DST OFFSET], 5+-12600+3600
+
 You can send these via MQTT downlink to the following sub
   
     MQTT_USER/MQTT_ID/config
