@@ -24,5 +24,7 @@ class LOGGER
 
 /** Overloads for logic */
 extern bool use_log;
+extern int32_t gmtoffset_sec;
+extern uint32_t daylightoffset_sec;
 
 #endif

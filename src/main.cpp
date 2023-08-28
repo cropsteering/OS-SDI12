@@ -86,6 +86,10 @@ void setup()
     R_LOG("FLASH", "Read: CSV " + String(CSV));
     use_sd = flash_storage.getBool("sd", false);
     R_LOG("FLASH", "Read: SD " + String(use_sd));
+    gmtoffset_sec = flash_storage.getInt("gmt", -12600);
+    R_LOG("FLASH", "Read: GMT " + String(gmtoffset_sec));
+    daylightoffset_sec = flash_storage.getUInt("dst", 3600);
+    R_LOG("FLASH", "Read: DST " + String(daylightoffset_sec));
 
     /** Join WiFi and connect to MQTT */
     mqtt_lib.mqtt_setup();
@@ -333,7 +337,21 @@ void chng_addr(String addr_old, String addr_new)
  * @param value uint32_t
  * @param restart restart SDI-12 sensor lookup
  */
-void flash_32(const char* key, uint32_t value, bool restart)
+void flash_32(const char* key, int32_t value, bool restart)
+{
+    flash_storage.putInt(key, value);
+    R_LOG("FLASH", "Write: " + String(key) + "/" + String(value));
+    if(restart) { cache_online(); }
+}
+
+/**
+ * @brief Save key:value data to flash
+ * 
+ * @param key char
+ * @param value uint32_t
+ * @param restart restart SDI-12 sensor lookup
+ */
+void flash_32u(const char* key, uint32_t value, bool restart)
 {
     flash_storage.putUInt(key, value);
     R_LOG("FLASH", "Write: " + String(key) + "/" + String(value));
@@ -347,7 +365,7 @@ void flash_32(const char* key, uint32_t value, bool restart)
  * @param value uint64_t
  * @param restart restart SDI-12 sensor lookup
  */
-void flash_64(const char* key, uint64_t value, bool restart)
+void flash_64u(const char* key, uint64_t value, bool restart)
 {
     flash_storage.putULong64(key, value);
     R_LOG("FLASH", "Write: " + String(key) + "/" + String(value));

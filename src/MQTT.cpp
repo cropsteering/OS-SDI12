@@ -131,7 +131,7 @@ String parse_data(String data)
         if (x == size-1) {
             mqtt_data += String(seglist[x].c_str());
         } else {
-            mqtt_data += String(seglist[x].c_str()) + ", ";
+            mqtt_data += String(seglist[x].c_str()) + ",";
         }
     }
 
@@ -145,7 +145,7 @@ String parse_data(String data)
  */
 void wifi_connect()
 {
-    uint8_t wifi_retry;
+    uint8_t wifi_retry = 0;
     delay(10);
 
     MQTT_LOG("WiFi", "Connecting to " + String(SSID));
@@ -182,7 +182,7 @@ void wifi_connect()
  */
 void mqtt_connect()
 {
-    uint8_t mqtt_retry;
+    uint8_t mqtt_retry = 0;
     while(!mqtt_client.connected() && WiFi.status() == WL_CONNECTED)
     {
         MQTT_LOG("MQTT", "Connecting to broker");
@@ -263,7 +263,7 @@ void parse_config(String data)
         /** CMD 1: Sleep period */
         case 1:
             delay_time = stoi(seglist[1])*1000000;
-            flash_64("period", delay_time, false);
+            flash_64u("period", delay_time, false);
             MQTT_LOG("MQTT", "Delay set to " + String(seglist[1].c_str()));
         break;
         /** CMD 2: Change SDI-12 address */
@@ -272,7 +272,7 @@ void parse_config(String data)
         break;
         /** CMD 3: Add sensor data set */
         case 3:
-            flash_32(seglist[1].c_str(), stoi(seglist[2]), true);
+            flash_32u(seglist[1].c_str(), stoi(seglist[2]), true);
         break;
         /** CMD 4: Use SD card */
         case 4:
@@ -285,6 +285,13 @@ void parse_config(String data)
                 MQTT_LOG("SD", "Set to false");
             }
             flash_bool("sd", use_sd, false);
+            ESP.restart();
+        break;
+        /** CMD 5: Change GMT/DST offset */
+        case 5:
+            flash_32("gmt", stoi(seglist[1]), false);
+            flash_32u("dst", stoi(seglist[2]), false);
+            ESP.restart();
         break;
     }
 }

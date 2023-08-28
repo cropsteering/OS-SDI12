@@ -25,9 +25,9 @@ bool card_found = false;
 /** Time server */
 String ntp_server = "pool.ntp.org";
 /** Time zone offset */
-int16_t gmtoffset_sec = -12600;
+int32_t gmtoffset_sec = 0;
 /** Daylight savings time offset */
-uint16_t daylightoffset_sec = 3600;
+uint32_t daylightoffset_sec = 0;
 
 /** Turn on/off LOGGER debug output*/
 #define LOGGER_DEBUG 1
