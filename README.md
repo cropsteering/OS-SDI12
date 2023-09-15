@@ -47,10 +47,10 @@ https://docs.rakwireless.com/Product-Categories/WisBlock/RAK11200/Quickstart/#in
 Promo code: CLFWTP 3% off
 
 You'll want a RAK baseboard and MCU(RAK11200 compatible), Kit link below.
-https://rakwireless.kckb.st/f99780fc
+[Link](https://rakwireless.kckb.st/f99780fc)
 
 And then you will want the SDI-12 Module: RAK13010
-https://rakwireless.kckb.st/a1205453
+[Link](https://rakwireless.kckb.st/a1205453)
 
 If you want to use the [SD card module](https://www.adafruit.com/product/4682), you will want to pick the DUAL IO board (RAK19001)
 
