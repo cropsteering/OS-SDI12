@@ -44,10 +44,13 @@ https://docs.rakwireless.com/Product-Categories/WisBlock/RAK11200/Quickstart/#in
 
 # Hardware needed
 You'll want one of the following baseboards
+
 https://store.rakwireless.com/collections/wisblock-base
 
 MCU
+
 https://store.rakwireless.com/products/wiscore-esp32-module-rak11200
 
 SDI-12 Module
+
 https://store.rakwireless.com/products/sdi-12-interface-rak13010
