@@ -1,4 +1,4 @@
-# R4K-SDI12 - ALPHA
+# OpenSteering-SDI12 - ALPHA
 SDI-12 Data logger, up to 62 addresses
 
 # MQTT Downlink Config commands
