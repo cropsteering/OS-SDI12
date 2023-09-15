@@ -48,6 +48,7 @@ Go to [RAK WIRELESS STORE](https://rakwireless.kckb.st/f4cc11c3)
 Promo code: CLFWTP 3% off
 
 You'll want a RAK baseboard (only one that will not work is the mini, RAK19003): RAK19007, RAK19001
+
 If you want to use the [SD card module](https://www.adafruit.com/product/4682), you will want to pick the DUAL IO board (RAK19001)
 
 And then you will want this RAK MCU: RAK11200
