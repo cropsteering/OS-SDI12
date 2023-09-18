@@ -44,8 +44,6 @@ https://docs.rakwireless.com/Product-Categories/WisBlock/RAK11200/Quickstart/#in
 
 # Hardware needed
 
-Promo code: CLFWTP 3% off
-
 You'll want a RAK baseboard and CORE(RAK11200 compatible)
 - [RAK19007+RAK11200 KIT](https://rakwireless.kckb.st/57a05b8f)
 - [BASE BOARDS](https://rakwireless.kckb.st/e0a81f2e)
