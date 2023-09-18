@@ -39,9 +39,6 @@ You can send these via MQTT downlink to the following sub
 
 This is all set in the mqtt_config.h
 
-# How to flash
-https://docs.rakwireless.com/Product-Categories/WisBlock/RAK11200/Quickstart/#install-platformio
-
 # Hardware needed
 
 You'll want a RAK baseboard and CORE(RAK11200 compatible)
@@ -53,6 +50,9 @@ And then you will want the SDI-12 Module: RAK13010
 - [RAK13010](https://rakwireless.kckb.st/21a4637e)
 
 If you want to use the [SD card module](https://www.adafruit.com/product/4682), you will want to use the DUAL IO board ( [RAK19001](https://rakwireless.kckb.st/e5bcf28c) )
+
+# How to flash
+https://docs.rakwireless.com/Product-Categories/WisBlock/RAK11200/Quickstart/#install-platformio
 
 # Support
 If you want to support, use one of the refferal links above to purchase your RAK hardware. OR just use the refferal code
