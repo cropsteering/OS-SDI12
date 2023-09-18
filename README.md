@@ -45,7 +45,7 @@ https://docs.rakwireless.com/Product-Categories/WisBlock/RAK11200/Quickstart/#in
 # Hardware needed
 
 You'll want a RAK baseboard and CORE(RAK11200 compatible)
-- [RAK19007+RAK11200 KIT](https://rakwireless.kckb.st/57a05b8f)
+- [RAK19007+RAK11200 KIT](https://rakwireless.kckb.st/57a05b8f) (Make sure to pick 19007+11200 in the drop down)
 - [BASE BOARDS](https://rakwireless.kckb.st/e0a81f2e)
 - [RAK11200](https://rakwireless.kckb.st/797d9c85)
 
