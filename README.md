@@ -46,12 +46,16 @@ https://docs.rakwireless.com/Product-Categories/WisBlock/RAK11200/Quickstart/#in
 
 Promo code: CLFWTP 3% off
 
-You'll want a RAK baseboard and MCU(RAK11200 compatible), Kit link below.
-[Link](https://rakwireless.kckb.st/f99780fc)
+You'll want a RAK baseboard and CORE(RAK11200 compatible)
+- [RAK19007+RAK11200 KIT](https://rakwireless.kckb.st/57a05b8f)
+- [BASE BOARDS](https://rakwireless.kckb.st/e0a81f2e)
+- [RAK11200](https://rakwireless.kckb.st/797d9c85)
 
 And then you will want the SDI-12 Module: RAK13010
-[Link](https://rakwireless.kckb.st/a1205453)
+- [RAK13010](https://rakwireless.kckb.st/21a4637e)
 
-If you want to use the [SD card module](https://www.adafruit.com/product/4682), you will want to pick the DUAL IO board (RAK19001)
+If you want to use the [SD card module](https://www.adafruit.com/product/4682), you will want to use the DUAL IO board ( [RAK19001](https://rakwireless.kckb.st/e5bcf28c) )
 
-
+# Support
+If you want to support, use one of the refferal links above to purchase your RAK hardware. OR just use the refferal code
+- [RAK Wireless Store](https://rakwireless.kckb.st/ace5fdc3) 8% off code: WGC279
