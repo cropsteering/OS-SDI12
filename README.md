@@ -58,7 +58,7 @@ If you want to use the [SD card module](https://www.adafruit.com/product/4682), 
 4. Press the PlatformIO: Upload button (or however you want to build/flash)
 
 # Support
-If you want to support, use one of the refferal links above to purchase your RAK hardware. OR just use the refferal code
+If you want to support, use one of the referral links above to purchase your RAK hardware. OR just use the referral code
 - [RAK Wireless Store](https://rakwireless.kckb.st/ace5fdc3) 8% off code: WGC279
   
 You won't see the discount until you check out
