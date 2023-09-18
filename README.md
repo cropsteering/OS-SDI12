@@ -52,7 +52,10 @@ And then you will want the SDI-12 Module: RAK13010
 If you want to use the [SD card module](https://www.adafruit.com/product/4682), you will want to use the DUAL IO board ( [RAK19001](https://rakwireless.kckb.st/e5bcf28c) )
 
 # How to flash
-https://docs.rakwireless.com/Product-Categories/WisBlock/RAK11200/Quickstart/#install-platformio
+1. https://docs.rakwireless.com/Product-Categories/WisBlock/RAK11200/Quickstart/#install-platformio
+2. Clone this repo to a local folder
+3. Open cloned folder in VSCode+PlatformIO (from above)
+4. Press the PlatformIO: Upload button (Or however you want to build/flash)
 
 # Support
 If you want to support, use one of the refferal links above to purchase your RAK hardware. OR just use the refferal code
