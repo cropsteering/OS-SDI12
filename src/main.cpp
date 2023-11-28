@@ -35,6 +35,8 @@ RAK_SDI12 sdi12_bus(RX_PIN, TX_PIN, OE);
 MQTT mqtt_lib;
 /** Logger Lib */
 LOGGER logger_lib;
+/** Preferences instance */
+Preferences flash_storage;
 /** Wait period between sensor readings */
 uint64_t delay_time;
 /** Is the SDI-12 bus ready */
@@ -45,8 +47,6 @@ uint8_t num_sensors;
 std::vector<String> addr_cache;
 /** Lookup for current sensors data set i.e D0-D9 */
 std::map<String, uint32_t> data_set;
-/** Preferences instance */
-Preferences flash_storage;
 
 /** Forward declaration */
 void R_LOG(String chan, String data);
@@ -91,11 +91,15 @@ void setup()
     daylightoffset_sec = flash_storage.getUInt("dst", 3600);
     R_LOG("FLASH", "Read: DST " + String(daylightoffset_sec));
 
-    /** Join WiFi and connect to MQTT */
+    /** 
+     * Join WiFi and connect to MQTT 
+     * Setup logger
+     * 
+     */
     mqtt_lib.mqtt_setup();
     logger_lib.logger_setup();
 
-    R_LOG("SDI-12", "Starting SDI-12 bus");
+    R_LOG("SDI-12", "Starting bus");
     sdi12_bus.begin();
     delay(500);
 

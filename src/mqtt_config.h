@@ -24,7 +24,7 @@ const char* PASSWORD = "";
 /** MQTT credentials */
 const char* MQTT_SERVER =  "";
 const uint16_t MQTT_PORT = 8883;
-const char* MQTT_ID = "";
+const char* MQTT_ID = "rak";
 const char* MQTT_USER = "";
 const char* MQTT_PASS = "";
 const String ZONE_NAME = "Zone1";

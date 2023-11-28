@@ -185,7 +185,7 @@ void mqtt_connect()
     uint8_t mqtt_retry = 0;
     while(!mqtt_client.connected() && WiFi.status() == WL_CONNECTED)
     {
-        MQTT_LOG("MQTT", "Connecting to broker");
+        MQTT_LOG("MQTT", "Connecting to " + String(MQTT_SERVER));
         if(mqtt_client.connect(MQTT_ID, MQTT_USER, MQTT_PASS))
         {
             MQTT_LOG("MQTT", "Connected to broker");
@@ -231,12 +231,12 @@ void mqtt_downlink(char* topic, byte* message, unsigned int length)
 
 /**
  * @brief Parse incoming MQTT data for config changes
+ * TODO: Delete data set(s)
  * 
  * @param data 
  */
 void parse_config(String data)
 {
-    String config_data;
     std::stringstream ss(data.c_str());
     std::string segment;
     std::vector<std::string> seglist;
@@ -245,7 +245,7 @@ void parse_config(String data)
         seglist.push_back(segment);
     }
 
-    u_int16_t cmd_int = stoi(seglist[0]);
+    uint16_t cmd_int = stoi(seglist[0]);
     switch(cmd_int)
     {
         /** CMD 0: CSV */
@@ -268,21 +268,23 @@ void parse_config(String data)
         break;
         /** CMD 2: Change SDI-12 address */
         case 2:
+            MQTT_LOG("MQTT", "Change SDI12 address");
             chng_addr(seglist[1].c_str(), seglist[2].c_str());
         break;
         /** CMD 3: Add sensor data set */
         case 3:
             flash_32u(seglist[1].c_str(), stoi(seglist[2]), true);
+            MQTT_LOG("MQTT", "Added sensor data set");
         break;
         /** CMD 4: Use SD card */
         case 4:
             if(seglist[1] == "true")
             {
                 use_sd = true;
-                MQTT_LOG("SD", "Set to true");
+                MQTT_LOG("SD", "Set to true, restarting...");
             } else {
                 use_sd = false;
-                MQTT_LOG("SD", "Set to false");
+                MQTT_LOG("SD", "Set to false, restarting...");
             }
             flash_bool("sd", use_sd, false);
             ESP.restart();
@@ -291,6 +293,7 @@ void parse_config(String data)
         case 5:
             flash_32("gmt", stoi(seglist[1]), false);
             flash_32u("dst", stoi(seglist[2]), false);
+            MQTT_LOG("MQTT", "Changed GMT/DST, restarting...");
             ESP.restart();
         break;
     }
